@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Kraków &amp; Małopolska feeder lines (MLD) — interactive map</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="style.css?v=20260822a">
+</head>
+<body>
+<div id="map"></div>
+<div id="area-box"></div>
+<div id="area-hint">Drag a rectangle to choose the export area &middot; Esc cancels</div>
+<div id="jp">
+  <button id="jp-toggle">Journey planner</button>
+  <div id="jp-card" hidden>
+    <div class="jp-head">
+      <span>Journey planner</span>
+      <button id="jp-close" aria-label="Hide the journey planner" title="Hide the journey planner">&#215;</button>
+    </div>
+    <p class="hint">Network search (no timetables): direct rides and up to two transfers, by ridden distance.</p>
+    <div class="jrow">
+      <input id="j-from" placeholder="From — stop name" autocomplete="off">
+      <button id="j-gps" title="Use my GPS position as the start">&#8982;</button>
+      <div class="jsug" id="j-from-sug" hidden></div>
+    </div>
+    <div class="jrow">
+      <input id="j-to" placeholder="To — stop name" autocomplete="off">
+      <div class="jsug" id="j-to-sug" hidden></div>
+    </div>
+    <div class="jrow">
+      <button id="j-go" class="jgo">Find route</button>
+      <button id="j-clear">Clear</button>
+    </div>
+    <ol id="j-results"></ol>
+    <p id="j-msg" class="hint"></p>
+  </div>
+</div>
+<aside id="panel">
+  <button id="panel-toggle" aria-label="Hide the panel" title="Hide the panel">&#215;</button>
+  <h1>Kraków + MLD<br>Public Transport</h1>
+  <details class="city-switch">
+    <summary>Switch city</summary>
+    <nav>
+      <a href="https://miqell24.github.io/krakow-bus-map/">Kraków</a>
+      <span class="current">Kraków + MLD (Małopolska feeder lines)</span>
+      <a href="https://miqell24.github.io/poznan-bus-map/">Poznań</a>
+      <a href="https://miqell24.github.io/gzm-bus-map/">GZM Metropolis (Katowice)</a>
+      <a href="https://miqell24.github.io/rybnik-bus-map/">Rybnik Region (Żory · Jastrzębie · Wodzisław)</a>
+      <a href="https://miqell24.github.io/trojmiasto-bus-map/">Tricity (Gdańsk–Gdynia–Sopot)</a>
+      <a href="https://miqell24.github.io/grodzisk-bus-map/">Grodzisk Mazowiecki Region</a>
+      <a href="https://miqell24.github.io/warsaw-bus-map/">Warsaw Region (Warsaw · Grodzisk Maz. · communes)</a>
+      <a href="https://miqell24.github.io/vienna-bus-map/">Vienna</a>
+      <a href="https://miqell24.github.io/budapest-bus-map/">Budapest</a>
+      <a href="https://miqell24.github.io/paris-bus-map/">Paris</a>
+      <a href="https://miqell24.github.io/copenhagen-bus-map/">Copenhagen</a>
+      <a href="https://miqell24.github.io/bucharest-bus-map/">Bucharest &amp; Ilfov</a>
+      <a href="https://miqell24.github.io/cluj-bus-map/">Cluj-Napoca</a>
+      <a href="https://miqell24.github.io/timisoara-bus-map/">Timișoara</a>
+      <a href="https://miqell24.github.io/oradea-bus-map/">Oradea</a>
+      <a href="https://miqell24.github.io/brasov-bus-map/">Brașov</a>
+      <a href="https://miqell24.github.io/iasi-bus-map/">Iași</a>
+      <a href="https://miqell24.github.io/constanta-bus-map/">Constanța</a>
+      <a href="https://miqell24.github.io/belgrade-bus-map/">Belgrade</a>
+      <a href="https://miqell24.github.io/sofia-bus-map/">Sofia</a>
+      <a href="https://miqell24.github.io/istanbul-bus-map/">Istanbul</a>
+      <a href="https://miqell24.github.io/athens-bus-map/">Athens</a>
+      <a href="https://miqell24.github.io/thessaloniki-bus-map/">Thessaloniki</a>
+      <a href="https://miqell24.github.io/naples-bus-map/">Naples</a>
+      <a href="https://miqell24.github.io/cairo-bus-map/">Cairo</a>
+      <a href="https://miqell24.github.io/rio-bus-map/">Rio de Janeiro</a>
+      <a href="https://miqell24.github.io/ba-bus-map/">Buenos Aires</a>
+      <a class="all" href="https://miqell24.github.io/transit-maps/">All cities — portal</a>
+
+
+    </nav>
+  </details>
+  <a class="modelink" href="schematic/">Network diagram &rarr;</a>
+  <div id="view-switch" class="viewsw" role="group" aria-label="Map view">
+    <button type="button" data-view="corridors" class="on">Corridors</button>
+    <button type="button" data-view="lines">Lines</button>
+  </div>
+  <div id="base-switch" role="group" aria-label="Base map colours"
+       title="The base map underneath the network: the paper look or flat grey newsprint.">
+    <button type="button" data-bg="paper">Paper base</button>
+    <button type="button" data-bg="grey">Grey base</button>
+  </div>
+  <p class="hint viewhint corridor-only">One stroke per roadway, the whole network in its mode colours.</p>
+  <p class="hint viewhint lines-only">Every line drawn on its own, in its own colour — up to four side by side.</p>
+  <ul class="legend">
+    <li class="lines-only"><span class="sw bundle"><i></i><i></i><i></i><i></i></span> Up to 4 lines: each on its own, in its own colour</li>
+    <li class="lines-only"><span class="sw trunk"></span> 5 or more: one grey stroke, its numbers beside it</li>
+    <li><label><input type="checkbox" id="toggle-bus" checked> <span class="sw line corridor-only"></span> Bus routes</label></li>
+    <li class="sublegend corridor-only">KMK Kraków (MPK) &middot; Małopolskie Linie Dowozowe A1&ndash;A71 (Koleje Małopolskie) &middot; Wieliczka commune buses WST (B2&ndash;Z1) &mdash; listed after the KMK numbers</li>
+    <li><label><input type="checkbox" id="toggle-tram" checked> <span class="sw line corridor-only tram"></span> Tram routes</label></li>
+    <li><span class="sw stop"></span> Stop</li>
+    <li><span class="sw terminus"></span> Terminus</li>
+  </ul>
+  <details class="lines">
+    <summary>All lines <span id="count"></span></summary>
+    <p class="hint">Click a line to show its route and stops.</p>
+    <div id="chips" class="chip-cloud"></div>
+  </details>
+  <div class="labelsize" title="Scales the transit content — line numbers, stop names and terminus badges — at any zoom. The PNG exports use the sizes you pick here.">
+    <span class="lbl">Lines &amp; stops</span>
+    <button id="label-smaller" aria-label="Smaller transit labels">A&minus;</button>
+    <span id="label-size-val">100%</span>
+    <button id="label-bigger" aria-label="Bigger transit labels">A+</button>
+  </div>
+  <div class="labelsize" title="Scales the street names (ours and the base map's) independently of the transit labels.">
+    <span class="lbl">Street names</span>
+    <button id="street-smaller" aria-label="Smaller street names">A&minus;</button>
+    <span id="street-size-val">100%</span>
+    <button id="street-bigger" aria-label="Bigger street names">A+</button>
+  </div>
+  <div class="labelsize" title="How often the line numbers repeat along the streets: low = one row per street, high = repeats appear earlier and also at lower zooms. The PNG exports use this too.">
+    <span class="lbl">Label density</span>
+    <button id="density-smaller" aria-label="Sparser number rows">&minus;</button>
+    <span id="density-val">100%</span>
+    <button id="density-bigger" aria-label="Denser number rows">+</button>
+  </div>
+  <div class="labelsize" title="Scales the drawn route strokes — lines, casings, dashes and ribbons. The PNG exports use this too.">
+    <span class="lbl">Line width</span>
+    <button id="width-smaller" aria-label="Thinner route lines">&minus;</button>
+    <span id="width-val">100%</span>
+    <button id="width-bigger" aria-label="Thicker route lines">+</button>
+  </div>
+  <div class="export">
+    <button id="export-png" title="Renders the visible view as a large print-quality PNG — street and stop names become legible as you zoom into the image">Export PNG — current view</button>
+    <button id="export-area" title="Drag a rectangle on the map; that area is rendered as a large print-quality PNG">Export PNG — select area</button>
+    <button id="export-atlas" title="The ENTIRE network as one poster-grade PNG at ~65 000 px on the long edge, streamed together in the browser (takes several minutes, keep the tab open)">Export PNG — whole map</button>
+  </div>
+  <div id="footer">Data: GTFS ZTP Kraków · MLD (Koleje Małopolskie, files.girlc.at) · WST Wieliczka (via kiedyPrzyjedzie.pl) · <span id="stamp"></span></div>
+  <label class="debug"><input type="checkbox" id="toggle-shape"> show raw GTFS shapes (QA)</label>
+</aside>
+<script src="vendor/maplibre-gl.js"></script>
+<script src="app.js?v=20260822a"></script>
+</body>
+</html>

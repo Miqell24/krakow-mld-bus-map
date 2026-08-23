@@ -1,0 +1,39 @@
+/* Diagram page — inherits the panel styling from ../style.css, adds only the
+   bits the schematic needs. The map background is paper-white (no basemap). */
+#map { background: #fbfaf5; }
+.sw.stop.major { width: 13px; height: 13px; border-width: 3px; border-color: #1d2b36; }
+.sw.term { width: 12px; height: 12px; border-radius: 50%; background: var(--kmk); box-shadow: 0 0 0 2px #fff, 0 0 0 3px #ccd; }
+.sw.plate {
+  display: inline-block;
+  background: var(--kmk);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.sw.river { width: 26px; height: 9px; background: #cfe6f7; border-radius: 2px; }
+.sw.bridge { width: 11px; height: 11px; border-radius: 50%; background: #fff; border: 2.5px solid #6f97b5; }
+#footer .modelink {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 9px;
+  border: 1px solid #ccd6e4;
+  border-radius: 7px;
+  background: #f4f7fb;
+  color: var(--kmk);
+  font-weight: 600;
+  text-decoration: none;
+}
+#footer .modelink:hover { background: var(--kmk); color: #fff; }
+
+/* export button — the diagram's real deliverable is the printed sheet */
+.export { margin: 10px 0 8px; }
+.export button {
+  width: 100%; padding: 8px 10px; font: inherit; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--kmk-dark); border-radius: 8px; background: var(--kmk); color: #fff;
+}
+.export button:hover { background: var(--kmk-dark); }
+.export button[disabled] { opacity: 0.65; cursor: progress; }
+.exp-note { display: block; margin-top: 4px; font-size: 11px; color: #778; }
