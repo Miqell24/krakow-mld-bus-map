@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Kraków &amp; Małopolska feeder lines (MLD) — interactive map</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=20260822a">
+<link rel="stylesheet" href="style.css?v=20260826c">
 </head>
 <body>
 <div id="map"></div>
@@ -42,6 +42,7 @@
   <details class="city-switch">
     <summary>Switch city</summary>
     <nav>
+      <input class="city-filter" type="search" placeholder="Type a city&hellip;" autocomplete="off" spellcheck="false" aria-label="Filter the city list">
       <a href="https://miqell24.github.io/krakow-bus-map/">Kraków</a>
       <span class="current">Kraków + MLD (Małopolska feeder lines)</span>
       <a href="https://miqell24.github.io/poznan-bus-map/">Poznań</a>
@@ -139,5 +140,35 @@
 </aside>
 <script src="vendor/maplibre-gl.js"></script>
 <script src="app.js?v=20260822a"></script>
+<script>
+(() => {
+  // City-switch filter: type instead of scrolling. Matches the English name,
+  // the local name and the Polish exonym, diacritic-insensitive.
+  const det = document.querySelector('details.city-switch');
+  const inp = det && det.querySelector('.city-filter');
+  if (!inp) return;
+  const ALT = {"krakow-bus-map": "Kraków Cracow Polska Poland Małopolska KMK MPK", "krakow-mld-bus-map": "Kraków MLD Małopolska Wieliczka Koleje Małopolskie Polska Poland", "poznan-bus-map": "Poznań Polska Poland ZTM", "gzm-bus-map": "Katowice GZM Śląsk Silesia Metropolia Tychy Gliwice Zabrze Sosnowiec Bytom Polska Poland", "rybnik-bus-map": "Rybnik Żory Jastrzębie-Zdrój Wodzisław Polska Poland", "trojmiasto-bus-map": "Trójmiasto Tricity Gdańsk Gdynia Sopot Wejherowo Rumia Polska Poland", "grodzisk-bus-map": "Grodzisk Mazowiecki WKD Milanówek Polanówek Polska Poland", "warsaw-bus-map": "Warszawa Warsaw Mazowsze ZTM WTP Metro SKM Polska Poland", "lodz-bus-map": "Łódź Lodz Polska Poland MPK ZDiT", "vienna-bus-map": "Wiedeń Wien Vienna Austria Österreich Wiener Linien", "budapest-bus-map": "Budapeszt Budapest Węgry Hungary Magyarország BKK", "paris-bus-map": "Paryż Paris Francja France IDFM RATP", "copenhagen-bus-map": "Kopenhaga København Copenhagen Dania Denmark", "bucharest-bus-map": "Bukareszt București Bucharest Ilfov Rumunia Romania STB", "cluj-bus-map": "Kluż Cluj-Napoca Kolozsvár Rumunia Romania", "timisoara-bus-map": "Timișoara Temeszwar Temesvár Rumunia Romania", "oradea-bus-map": "Oradea Nagyvárad Rumunia Romania", "brasov-bus-map": "Braszów Brașov Rumunia Romania", "iasi-bus-map": "Jassy Iași Rumunia Romania", "constanta-bus-map": "Konstanca Constanța Rumunia Romania", "belgrade-bus-map": "Belgrad Beograd Belgrade Serbia Srbija Београд", "sofia-bus-map": "Sofia София Bułgaria Bulgaria", "istanbul-bus-map": "Stambuł İstanbul Istanbul Turcja Turkey Türkiye İETT", "athens-bus-map": "Ateny Athens Αθήνα Athina Grecja Greece OASA", "thessaloniki-bus-map": "Saloniki Thessaloniki Θεσσαλονίκη Grecja Greece", "naples-bus-map": "Neapol Napoli Naples Włochy Italy Italia ANM", "cairo-bus-map": "Kair Cairo القاهرة Egipt Egypt", "addis-bus-map": "Addis Abeba Ababa Etiopia Ethiopia Anbessa", "mexico-city-bus-map": "Meksyk Mexico City CDMX Ciudad de México Metrobús", "sao-paulo-bus-map": "São Paulo Brazylia Brazil SPTrans", "rio-bus-map": "Rio de Janeiro Brazylia Brazil BRT", "ba-bus-map": "Buenos Aires Argentyna Argentina colectivo subte"};
+  const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/ł/g, 'l').replace(/ø/g, 'o').replace(/đ/g, 'd').replace(/ß/g, 'ss').replace(/æ/g, 'ae').replace(/ı/g, 'i');
+  const rows = [...det.querySelectorAll('nav a, nav .current')];
+  for (const r of rows) {
+    const slug = r.href ? (new URL(r.href).pathname.split('/').filter(Boolean)[0] || '') : '';
+    r.dataset.q = norm(r.textContent + ' ' + (ALT[slug] || ''));
+  }
+  const apply = () => {
+    const nq = norm(inp.value.trim());
+    for (const r of rows) r.style.display = !nq || r.classList.contains('all') || r.dataset.q.includes(nq) ? '' : 'none';
+  };
+  inp.addEventListener('input', apply);
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const f = rows.find((r) => r.href && !r.classList.contains('all') && r.style.display !== 'none');
+      if (f) location.href = f.href;
+    } else if (e.key === 'Escape') { inp.value = ''; apply(); e.stopPropagation(); }
+  });
+  det.addEventListener('toggle', () => {
+    if (det.open && matchMedia('(pointer: fine)').matches) setTimeout(() => inp.focus(), 0);
+  });
+})();
+</script>
 </body>
 </html>
