@@ -52,10 +52,16 @@
       <a href="https://miqell24.github.io/grodzisk-bus-map/">Grodzisk Mazowiecki Region</a>
       <a href="https://miqell24.github.io/warsaw-bus-map/">Warsaw Region (Warsaw · Grodzisk Maz. · communes)</a>
       <a href="https://miqell24.github.io/lodz-bus-map/">Łódź</a>
+      <a href="https://miqell24.github.io/olsztyn-bus-map/">Olsztyn</a>
+      <a href="https://miqell24.github.io/berlin-bus-map/">Berlin (with Potsdam &amp; the Brandenburg ring)</a>
       <a href="https://miqell24.github.io/vienna-bus-map/">Vienna</a>
       <a href="https://miqell24.github.io/budapest-bus-map/">Budapest</a>
       <a href="https://miqell24.github.io/paris-bus-map/">Paris</a>
+      <a href="https://miqell24.github.io/randstad-bus-map/">Randstad (Amsterdam &middot; Haarlem &middot; Leiden &middot; Den Haag &middot; Rotterdam)</a>
       <a href="https://miqell24.github.io/copenhagen-bus-map/">Copenhagen</a>
+      <a href="https://miqell24.github.io/aarhus-bus-map/">Aarhus</a>
+      <a href="https://miqell24.github.io/stockholm-bus-map/">Stockholm</a>
+      <a href="https://miqell24.github.io/goteborg-bus-map/">Göteborg</a>
       <a href="https://miqell24.github.io/london-bus-map/">London</a>
       <a href="https://miqell24.github.io/bucharest-bus-map/">Bucharest &amp; Ilfov</a>
       <a href="https://miqell24.github.io/cluj-bus-map/">Cluj-Napoca</a>
@@ -64,11 +70,19 @@
       <a href="https://miqell24.github.io/brasov-bus-map/">Brașov</a>
       <a href="https://miqell24.github.io/iasi-bus-map/">Iași</a>
       <a href="https://miqell24.github.io/constanta-bus-map/">Constanța</a>
+      <a href="https://miqell24.github.io/kyiv-bus-map/">Kyiv</a>
+      <a href="https://miqell24.github.io/lviv-bus-map/">Lviv</a>
       <a href="https://miqell24.github.io/belgrade-bus-map/">Belgrade</a>
+      <a href="https://miqell24.github.io/novi-sad-bus-map/">Novi Sad</a>
+      <a href="https://miqell24.github.io/nis-bus-map/">Niš</a>
+      <a href="https://miqell24.github.io/tirana-bus-map/">Tirana</a>
       <a href="https://miqell24.github.io/sofia-bus-map/">Sofia</a>
+      <a href="https://miqell24.github.io/plovdiv-bus-map/">Plovdiv</a>
+      <a href="https://miqell24.github.io/varna-bus-map/">Varna</a>
       <a href="https://miqell24.github.io/istanbul-bus-map/">Istanbul</a>
       <a href="https://miqell24.github.io/athens-bus-map/">Athens</a>
       <a href="https://miqell24.github.io/thessaloniki-bus-map/">Thessaloniki</a>
+      <a href="https://miqell24.github.io/rome-bus-map/">Rome</a>
       <a href="https://miqell24.github.io/naples-bus-map/">Naples</a>
       <a href="https://miqell24.github.io/cairo-bus-map/">Cairo</a>
       <a href="https://miqell24.github.io/addis-bus-map/">Addis Ababa</a>
@@ -148,7 +162,7 @@
   const det = document.querySelector('details.city-switch');
   const inp = det && det.querySelector('.city-filter');
   if (!inp) return;
-  const ALT = {"krakow-bus-map": "Kraków Cracow Polska Poland Małopolska KMK MPK", "krakow-mld-bus-map": "Kraków MLD Małopolska Wieliczka Koleje Małopolskie Polska Poland", "poznan-bus-map": "Poznań Polska Poland ZTM", "gzm-bus-map": "Katowice GZM Śląsk Silesia Metropolia Tychy Gliwice Zabrze Sosnowiec Bytom Polska Poland", "rybnik-bus-map": "Rybnik Żory Jastrzębie-Zdrój Wodzisław Polska Poland", "trojmiasto-bus-map": "Trójmiasto Tricity Gdańsk Gdynia Sopot Wejherowo Rumia Polska Poland", "grodzisk-bus-map": "Grodzisk Mazowiecki WKD Milanówek Polanówek Polska Poland", "warsaw-bus-map": "Warszawa Warsaw Mazowsze ZTM WTP Metro SKM Polska Poland", "lodz-bus-map": "Łódź Lodz Polska Poland MPK ZDiT", "vienna-bus-map": "Wiedeń Wien Vienna Austria Österreich Wiener Linien", "budapest-bus-map": "Budapeszt Budapest Węgry Hungary Magyarország BKK", "paris-bus-map": "Paryż Paris Francja France IDFM RATP", "london-bus-map": "Londyn London United Kingdom Anglia England TfL", "copenhagen-bus-map": "Kopenhaga København Copenhagen Dania Denmark", "bucharest-bus-map": "Bukareszt București Bucharest Ilfov Rumunia Romania STB", "cluj-bus-map": "Kluż Cluj-Napoca Kolozsvár Rumunia Romania", "timisoara-bus-map": "Timișoara Temeszwar Temesvár Rumunia Romania", "oradea-bus-map": "Oradea Nagyvárad Rumunia Romania", "brasov-bus-map": "Braszów Brașov Rumunia Romania", "iasi-bus-map": "Jassy Iași Rumunia Romania", "constanta-bus-map": "Konstanca Constanța Rumunia Romania", "belgrade-bus-map": "Belgrad Beograd Belgrade Serbia Srbija Београд", "sofia-bus-map": "Sofia София Bułgaria Bulgaria", "istanbul-bus-map": "Stambuł İstanbul Istanbul Turcja Turkey Türkiye İETT", "athens-bus-map": "Ateny Athens Αθήνα Athina Grecja Greece OASA", "thessaloniki-bus-map": "Saloniki Thessaloniki Θεσσαλονίκη Grecja Greece", "naples-bus-map": "Neapol Napoli Naples Włochy Italy Italia ANM", "cairo-bus-map": "Kair Cairo القاهرة Egipt Egypt", "addis-bus-map": "Addis Abeba Ababa Etiopia Ethiopia Anbessa", "mexico-city-bus-map": "Meksyk Mexico City CDMX Ciudad de México Metrobús", "sao-paulo-bus-map": "São Paulo Brazylia Brazil SPTrans", "rio-bus-map": "Rio de Janeiro Brazylia Brazil BRT", "ba-bus-map": "Buenos Aires Argentyna Argentina colectivo subte"};
+  const ALT = {"krakow-bus-map": "Kraków Cracow Polska Poland Małopolska KMK MPK", "krakow-mld-bus-map": "Kraków MLD Małopolska Wieliczka Koleje Małopolskie Polska Poland", "poznan-bus-map": "Poznań Polska Poland ZTM", "gzm-bus-map": "Katowice GZM Śląsk Silesia Metropolia Tychy Gliwice Zabrze Sosnowiec Bytom Polska Poland", "rybnik-bus-map": "Rybnik Żory Jastrzębie-Zdrój Wodzisław Polska Poland", "trojmiasto-bus-map": "Trójmiasto Tricity Gdańsk Gdynia Sopot Wejherowo Rumia Polska Poland", "grodzisk-bus-map": "Grodzisk Mazowiecki WKD Milanówek Polanówek Polska Poland", "warsaw-bus-map": "Warszawa Warsaw Mazowsze ZTM WTP Metro SKM Polska Poland", "lodz-bus-map": "Łódź Lodz Polska Poland MPK ZDiT", "vienna-bus-map": "Wiedeń Wien Vienna Austria Österreich Wiener Linien", "budapest-bus-map": "Budapeszt Budapest Węgry Hungary Magyarország BKK", "paris-bus-map": "Paryż Paris Francja France IDFM RATP", "london-bus-map": "Londyn London United Kingdom Anglia England TfL", "copenhagen-bus-map": "Kopenhaga København Copenhagen Dania Denmark", "bucharest-bus-map": "Bukareszt București Bucharest Ilfov Rumunia Romania STB", "cluj-bus-map": "Kluż Cluj-Napoca Kolozsvár Rumunia Romania", "timisoara-bus-map": "Timișoara Temeszwar Temesvár Rumunia Romania", "oradea-bus-map": "Oradea Nagyvárad Rumunia Romania", "brasov-bus-map": "Braszów Brașov Rumunia Romania", "iasi-bus-map": "Jassy Iași Rumunia Romania", "constanta-bus-map": "Konstanca Constanța Rumunia Romania", "belgrade-bus-map": "Belgrad Beograd Belgrade Serbia Srbija Београд", "sofia-bus-map": "Sofia София Bułgaria Bulgaria", "istanbul-bus-map": "Stambuł İstanbul Istanbul Turcja Turkey Türkiye İETT", "athens-bus-map": "Ateny Athens Αθήνα Athina Grecja Greece OASA", "thessaloniki-bus-map": "Saloniki Thessaloniki Θεσσαλονίκη Grecja Greece", "naples-bus-map": "Neapol Napoli Naples Włochy Italy Italia ANM", "cairo-bus-map": "Kair Cairo القاهرة Egipt Egypt", "addis-bus-map": "Addis Abeba Ababa Etiopia Ethiopia Anbessa", "mexico-city-bus-map": "Meksyk Mexico City CDMX Ciudad de México Metrobús", "sao-paulo-bus-map": "São Paulo Brazylia Brazil SPTrans", "rio-bus-map": "Rio de Janeiro Brazylia Brazil BRT", "ba-bus-map": "Buenos Aires Argentyna Argentina colectivo subte", "berlin-bus-map": "Berlin Brandenburgia Brandenburg Poczdam Potsdam Niemcy Germany Deutschland BVG VBB S-Bahn U-Bahn", "randstad-bus-map": "Randstad Amsterdam Haarlem Lejda Leiden Haga Den Haag The Hague Rotterdam Holandia Netherlands Nederland Holland GVB HTM RET", "stockholm-bus-map": "Sztokholm Stockholm Szwecja Sweden Sverige SL tunnelbana pendeltåg Roslagsbanan", "goteborg-bus-map": "Göteborg Goteborg Gothenburg Gotembork Szwecja Sweden Sverige Västtrafik spårvagn", "olsztyn-bus-map": "Olsztyn Warmia Mazury Warmińsko-Mazurskie Polska Poland ZDZiT tramwaj", "aarhus-bus-map": "Aarhus Århus Dania Denmark Danmark Midttrafik Letbane Jutland Jylland", "rome-bus-map": "Rzym Roma Rome Włochy Italy Italia Atac metropolitana Lazio", "kyiv-bus-map": "Kijów Kyiv Київ Kiev Ukraina Ukraine Україна тролейбус трамвай", "lviv-bus-map": "Lwów Lviv Львів Lemberg Ukraina Ukraine Україна Львівелектротранс", "novi-sad-bus-map": "Nowy Sad Novi Sad Нови Сад Wojwodina Vojvodina Serbia Srbija JGSP", "nis-bus-map": "Nisz Niš Ниш Serbia Srbija JGSP Niš-Ekspres", "tirana-bus-map": "Tirana Tiranë Albania Shqipëri Shqipëria", "plovdiv-bus-map": "Płowdiw Plovdiv Пловдив Bułgaria Bulgaria", "varna-bus-map": "Warna Varna Варна Bułgaria Bulgaria тролейбус trolejbus"};
   const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/ł/g, 'l').replace(/ø/g, 'o').replace(/đ/g, 'd').replace(/ß/g, 'ss').replace(/æ/g, 'ae').replace(/ı/g, 'i');
   const rows = [...det.querySelectorAll('nav a, nav .current')];
   for (const r of rows) {
