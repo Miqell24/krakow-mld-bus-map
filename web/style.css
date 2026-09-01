@@ -374,7 +374,7 @@ details.journey .beta {
 #base-switch { margin-top: -4px; }
 .viewhint { margin: 0 0 8px; }
 /* each view shows only its own legend rows and its own one-line explanation */
-.lines-only { display: none; }
+.lines-only, .legend li.lines-only { display: none; }  /* .legend li is (0,1,1) — a bare .lines-only never beats it */
 body.lines-view .corridor-only { display: none; }
 body.lines-view li.lines-only { display: flex; }
 body.lines-view p.lines-only { display: block; }
