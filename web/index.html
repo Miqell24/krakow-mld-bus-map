@@ -158,7 +158,6 @@
   <div class="export">
     <button id="export-png" title="Renders the visible view as a large print-quality PNG — street and stop names become legible as you zoom into the image">Export PNG — current view</button>
     <button id="export-area" title="Drag a rectangle on the map; that area is rendered as a large print-quality PNG">Export PNG — select area</button>
-    <button id="export-pdf" title="The visible view as a VECTOR PDF: every roadway, transit stroke, stop and label is a path or a text object, in PDF layers — editable in Illustrator, Affinity or Inkscape (the map's Roboto Condensed is embedded)">Export PDF — current view (vector)</button>
     <button id="export-atlas" title="The ENTIRE network as one poster-grade PNG at ~65 000 px on the long edge, streamed together in the browser (takes several minutes, keep the tab open)">Export PNG — whole map</button>
   </div>
   <div id="footer">Data: GTFS ZTP Kraków · MLD (Koleje Małopolskie, files.girlc.at) · WST Wieliczka (via kiedyPrzyjedzie.pl) · <span id="stamp"></span></div>
@@ -166,7 +165,7 @@
 </aside>
 <script src="vendor/maplibre-gl.js"></script>
 <script src="app.js?v=20260822a"></script>
-<script src="pdf-export.js?v=20260907a"></script>
+<script src="pdf-export.js?v=20260907c"></script>
 <script>
 (() => {
   // City-switch filter: type instead of scrolling. Matches the English name,
