@@ -44,7 +44,11 @@ const nk = (c) => c[0].toFixed(6) + ',' + c[1].toFixed(6);
 
 // line numbers sort like a timetable, not like strings (build.mjs convention)
 const keyParts = (s) => { const m = /^(\D*)(\d*)(.*)$/.exec(s); return [m[1], m[2] ? Number(m[2]) : Infinity, m[3]]; };
-const numSort = (a, b) => { const A = keyParts(a), B = keyParts(b); return A[0].localeCompare(B[0]) || (A[1] - B[1]) || A[2].localeCompare(B[2]); };
+// line RANK from the build (meta.json): trolleybuses 0, day 1, night 2 —
+// the rows print night lines last, as the panel and the badges do
+const META_RANK = new Map((JSON.parse(readFileSync(join(OUT, 'meta.json'), 'utf8')).lines || []).map((l) => [l.line, l.rank ?? 1]));
+const rankOf = (k) => META_RANK.get(k) ?? 1;
+const numSort = (a, b) => { const A = keyParts(a), B = keyParts(b); return rankOf(a) - rankOf(b) || A[0].localeCompare(B[0]) || (A[1] - B[1]) || A[2].localeCompare(B[2]); };
 
 // ---------- colour: CIE-Lab, so "different enough" is a measurable distance ----------
 function lab2rgb(L, a, b) {
