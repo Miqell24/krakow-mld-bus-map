@@ -17,6 +17,8 @@
   const TILE = 2048;         // CSS px of the inner tile
   const MAX_PX = 65536;      // long edge of a poster sheet in CSS px — the PNG posters' ceiling
   const MAX_PT = 14000;      // long edge of the PDF page in points (Acrobat's 200-inch limit)
+  const STOP_R = 13;         // stop marker radius, CSS px at icon-size 1 (the screen's disc is 7.5 — the poster wants them seen)
+  const STOP_RIM = 3.5;      // its rim
   const MAP = () => window.__map || (typeof map !== 'undefined' && map && map.getZoom ? map : null);
 
   const VARIANTS = [
@@ -397,7 +399,7 @@
     };
     const withAlpha = (a, fn) => { const k = alphaKey(a); if (!k) return fn(); C.op('q ' + k + ' gs'); fn(); C.op('Q'); };
     const state = {
-      C, S, W, H, PW, PH, fReg, fBold, enter, leave, groupOf, withAlpha,
+      C, S, W, H, PW, PH, fReg, fBold, enter, leave, groupOf, withAlpha, alphaKey, nameSpots: new Map(),
       placed: (() => { const G = 48; const cells = new Map(); return {
         hit(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const c = cells.get(i + ',' + j); if (c && c.some((q) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) return true; } return false; },
         add(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const k = i + ',' + j; let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(b); } },
@@ -429,12 +431,11 @@
         try { for (const id of m0.listImages()) { const im = m0.getImage(id); if (im && !m2.hasImage(id)) m2.addImage(id, im.data, { pixelRatio: im.pixelRatio, sdf: im.sdf }); } } catch (e) { console.warn('icons not copied', e); }
         m2.triggerRepaint(); await idle();
         const px = (lng, lat) => [(mxOf(lng) * world - tlx) * S, (H - (myOf(lat) * world - tly)) * S];
-        let k = 0; const n = tiles.rows * tiles.cols; const T = state.T; const t00 = performance.now();
+        let k = 0; const n = tiles.rows * tiles.cols; const T = state.T;
         for (let j = 0; j < tiles.rows; j++) {
           for (let i = 0; i < tiles.cols; i++) {
             k++;
-            const el = (performance.now() - t00) / 1000, eta = k > 3 ? Math.round((el / (k - 1)) * (n - k + 1)) : null;
-            setLbl(`Drawing ${k}/${n}…` + (eta !== null ? ` ~${eta >= 90 ? Math.round(eta / 60) + ' min' : eta + ' s'} left` : ''));
+            setLbl(`Drawing ${k}/${n}…`);
             const x0 = i * TILE, y0 = j * TILE;
             const w = Math.min(TILE, W - x0), h = Math.min(TILE, H - y0);
             m2.jumpTo({ center: px2ll(tlx + x0 + w / 2, tly + y0 + h / 2), zoom: Z });
@@ -475,7 +476,7 @@
       page.node.Resources().set(PDFName.of('Properties'), props);
       doc.catalog.set(PDFName.of('OCProperties'), ctx.obj({ OCGs: ocgRefs, D: ctx.obj({ Order: ocgRefs, ON: ocgRefs, BaseState: 'ON' }) }));
     }
-    console.log('pdf-export', { W, H, Z: Math.round(Z * 100) / 100, S: Math.round(S * 1000) / 1000, tiles, ...state.counts, content: bytes.length, ms: Object.fromEntries(Object.entries(state.T).map(([k, v]) => [k, Math.round(v)])) });
+    window.__pdfStats = { W, H, Z, S, tiles, ...state.counts, content: bytes.length, ms: state.T }; console.log('pdf-export', { W, H, Z: Math.round(Z * 100) / 100, S: Math.round(S * 1000) / 1000, tiles, ...state.counts, content: bytes.length, ms: Object.fromEntries(Object.entries(state.T).map(([k, v]) => [k, Math.round(v)])) });
     return doc.save({ useObjectStreams: false });
   }
 
@@ -485,7 +486,7 @@
   // their anchor is inside it, so the overlap between tiles is context, not
   // duplication.
   function drawScene(m, px, rect, st) {
-    const { C, S, PH, fReg, fBold, clean, placed, seen, counts, enter, leave, groupOf, withAlpha } = st;
+    const { C, S, PH, fReg, fBold, clean, placed, seen, counts, enter, leave, groupOf, withAlpha, alphaKey, nameSpots } = st;
     const z = m.getZoom();
     const col = (c, alphaMul) => { const k = parseColor(c); return k ? { r: k.r, g: k.g, b: k.b, a: Math.max(0, Math.min(1, k.a * (alphaMul ?? 1))) } : null; };
     const asRings = (g) => (g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []);
@@ -536,10 +537,28 @@
       for (const f of all) { const id = f.layer && f.layer.id; if (!id) continue; let a = byLayer.get(id); if (!a) byLayer.set(id, a = []); a.push(f); }
     } catch (e) { console.warn('pdf-export query', e); }
     st.T.query += performance.now() - tq;
-    for (const L of m.getStyle().layers) {
-      if (L.layout && L.layout.visibility === 'none') continue;
-      if (L.minzoom !== undefined && z < L.minzoom) continue;
-      if (L.maxzoom !== undefined && z >= L.maxzoom) continue;
+    const layers = m.getStyle().layers.filter((L) => !(L.layout && L.layout.visibility === 'none') && !(L.minzoom !== undefined && z < L.minzoom) && !(L.maxzoom !== undefined && z >= L.maxzoom));
+    const propsOf = (f) => {
+      const p = { ...f.properties, __geom: f.geometry.type };
+      for (const k in p) { const v = p[k]; if (typeof v === 'string' && (v[0] === '[' || v[0] === '{')) { try { p[k] = JSON.parse(v); } catch (e) { /* a real string */ } } } // queryRenderedFeatures stringifies nested values
+      return p;
+    };
+    const clipOp = 'q ' + (rect ? f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) : '0 0 ' + f1(st.PW) + ' ' + f1(PH)) + ' re W n';
+
+    // ---- pass 1: the symbols, placed the way MapLibre places them — the
+    // top-most layer first, so it wins the collisions; the stop discs and
+    // badge boxes go before every label so no name lands on a marker ----
+    const symOps = new Map();
+    const hasText = (L) => { const tf = m.getLayoutProperty(L.id, 'text-field'); return tf !== undefined && tf !== null && tf !== ''; };
+    const symLayers = layers.filter((L) => L.type === 'symbol' && byLayer.has(L.id));
+    for (const L of [...symLayers.filter((L) => !hasText(L)), ...symLayers.filter(hasText).reverse()]) {
+      const out = [];
+      try { drawSymbols(L, byLayer.get(L.id), out); } catch (e) { console.warn('pdf-export symbols', L.id, e); }
+      symOps.set(L.id, out);
+    }
+
+    // ---- pass 2: everything in style order ----
+    for (const L of layers) {
       const group = groupOf(L.id, L.type, L.source);
       if (L.type === 'background') {
         enter(group);
@@ -547,22 +566,28 @@
         if (c) withAlpha(c.a, () => C.op(rgbS(c) + ' rg ' + (rect ? f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) : '0 0 ' + f1(st.PW) + ' ' + f1(PH)) + ' re f'));
         continue;
       }
-      if (!['fill', 'line', 'symbol', 'circle'].includes(L.type)) continue;
+      if (L.type === 'symbol') {
+        const ops = symOps.get(L.id);
+        if (!ops || !ops.length) continue;
+        counts.layers++;
+        // a label whose anchor sits inside the tile reaches past its edge:
+        // symbols are drawn outside the tile clip
+        leave(); C.op('Q');
+        enter(group);
+        for (const o of ops) C.op(o);
+        leave(); C.op(clipOp);
+        continue;
+      }
+      if (!['fill', 'line', 'circle'].includes(L.type)) continue;
       const feats = byLayer.get(L.id);
       if (!feats || !feats.length) continue;
       feats.reverse(); // the query lists the top-most feature first
       counts.layers++;
-      // a label whose anchor sits inside the tile reaches past its edge:
-      // symbols are drawn outside the tile clip (their anchor test keeps
-      // the overlap from duplicating them)
-      const unclipped = rect && L.type === 'symbol';
-      if (unclipped) { leave(); C.op('Q'); }
       enter(group);
       const paint = (k) => m.getPaintProperty(L.id, k);
       const layout = (k) => m.getLayoutProperty(L.id, k);
       for (const f of feats) {
-        const p = { ...f.properties, __geom: f.geometry.type };
-        for (const k in p) { const v = p[k]; if (typeof v === 'string' && (v[0] === '[' || v[0] === '{')) { try { p[k] = JSON.parse(v); } catch (e) { /* a real string */ } } } // queryRenderedFeatures stringifies nested values
+        const p = propsOf(f);
         const g = f.geometry;
         if (L.type === 'fill') {
           const c = col(ev(paint('fill-color'), z, p), num(ev(paint('fill-opacity'), z, p), 1));
@@ -591,131 +616,171 @@
           const r = num(ev(paint('circle-radius'), z, p), 3) * S;
           if (!c) continue;
           for (const pt of asPoints(g)) { const [x, y] = px(pt[0], pt[1]); if (!inRect(x, y)) continue; withAlpha(c.a, () => C.op(rgbS(c) + ' rg ' + circle(x, y, r) + ' f')); counts.icons++; }
-        } else if (L.type === 'symbol') try {
-          const textRaw = ev(layout('text-field'), z, p);
-          const text = textRaw === undefined || textRaw === null ? '' : String(textRaw);
-          const size = num(ev(layout('text-size'), z, p), 12) * S;
-          const fonts = ev(layout('text-font'), z, p);
-          const bold = Array.isArray(fonts) ? /bold/i.test(fonts[0] || '') : /bold/i.test(String(fonts || ''));
-          const font = bold ? fBold : fReg, fkey = bold ? 'F2' : 'F1';
-          const tc = col(ev(paint('text-color'), z, p), num(ev(paint('text-opacity'), z, p), 1)) || { r: 0, g: 0, b: 0, a: 1 };
-          const hw = num(ev(paint('text-halo-width'), z, p), 0);
-          const hc = hw > 0 ? col(ev(paint('text-halo-color'), z, p), 1) : null;
-          const rot = num(ev(layout('text-rotate'), z, p), 0);
-          const off = ev(layout('text-offset'), z, p) || [0, 0];
-          const radial = num(ev(layout('text-radial-offset'), z, p), 0);
-          let anchor = ev(layout('text-anchor'), z, p) || 'center';
-          const vanch = ev(layout('text-variable-anchor'), z, p);
-          if (Array.isArray(vanch) && vanch.length) anchor = vanch[0];
-          const placement = ev(layout('symbol-placement'), z, p) || 'point';
-          const icon = ev(layout('icon-image'), z, p);
-          const iconSize = num(ev(layout('icon-size'), z, p), 1);
-          const iconRot = num(ev(layout('icon-rotate'), z, p), 0);
-          const maxWidthEm = num(ev(layout('text-max-width'), z, p), 10);
-          const t = clean(text, bold).replace(/\s+$/, '');
-          // where: a point symbol at its anchor, a line symbol at the line's middle
-          let anchors = []; let lineAngle = 0;
-          if (placement === 'point' || g.type === 'Point' || g.type === 'MultiPoint') {
-            anchors = asPoints(g).length ? asPoints(g).map((c) => px(c[0], c[1])) : (asLines(g)[0] ? [px(...asLines(g)[0][Math.floor(asLines(g)[0].length / 2)])] : []);
-          } else {
-            const line = asLines(g)[0];
-            if (!line || line.length < 2) continue;
+        }
+      }
+    }
+
+    // The symbols of one layer: icons (stop discs, badge boxes) and labels.
+    // Point labels sit at their anchor (variable anchors: the first free one
+    // of the list, replayed against every box placed so far). Line labels —
+    // street names, the number rows — are placed along the WHOLE geometry
+    // at the layer's symbol-spacing, only where the line runs straight for
+    // the label's length, never twice within a spacing of the same name, and
+    // never over another label: the position MapLibre chose is not exposed,
+    // and its per-vector-tile pieces would otherwise put the same name at
+    // random spots, twice.
+    function drawSymbols(L, feats, out) {
+      const paint = (k) => m.getPaintProperty(L.id, k);
+      const layout = (k) => m.getLayoutProperty(L.id, k);
+      const alpha = (a, fn) => { const k = alphaKey(a); if (!k) return fn(); out.push('q ' + k + ' gs'); fn(); out.push('Q'); };
+      for (const f of feats) {
+        const p = propsOf(f);
+        const g = f.geometry;
+        const textRaw = ev(layout('text-field'), z, p);
+        const text = textRaw === undefined || textRaw === null ? '' : String(textRaw);
+        const size = num(ev(layout('text-size'), z, p), 12) * S;
+        const fonts = ev(layout('text-font'), z, p);
+        const bold = Array.isArray(fonts) ? /bold/i.test(fonts[0] || '') : /bold/i.test(String(fonts || ''));
+        const font = bold ? fBold : fReg, fkey = bold ? 'F2' : 'F1';
+        const tc = col(ev(paint('text-color'), z, p), num(ev(paint('text-opacity'), z, p), 1)) || { r: 0, g: 0, b: 0, a: 1 };
+        const hw = num(ev(paint('text-halo-width'), z, p), 0);
+        const hc = hw > 0 ? col(ev(paint('text-halo-color'), z, p), 1) : null;
+        const rot = num(ev(layout('text-rotate'), z, p), 0);
+        const off = ev(layout('text-offset'), z, p) || [0, 0];
+        const radial = num(ev(layout('text-radial-offset'), z, p), 0);
+        let anchor = ev(layout('text-anchor'), z, p) || 'center';
+        const vanch = ev(layout('text-variable-anchor'), z, p);
+        if (Array.isArray(vanch) && vanch.length) anchor = vanch[0];
+        const allowOverlap = !!ev(layout('text-allow-overlap'), z, p);
+        const placement = ev(layout('symbol-placement'), z, p) || 'point';
+        const spacing = num(ev(layout('symbol-spacing'), z, p), 250) * S;
+        const icon = ev(layout('icon-image'), z, p);
+        const iconSize = num(ev(layout('icon-size'), z, p), 1);
+        const iconRot = num(ev(layout('icon-rotate'), z, p), 0);
+        const maxWidthEm = num(ev(layout('text-max-width'), z, p), 10);
+        const t = clean(text, bold).replace(/\s+$/, '');
+        const tw1 = t ? font.widthOfTextAtSize(t, size) : 0;
+        // where: a point symbol at its anchor, a line symbol along the line
+        let anchors = [];
+        if (placement === 'point' || g.type === 'Point' || g.type === 'MultiPoint') {
+          anchors = asPoints(g).length ? asPoints(g).map((c) => px(c[0], c[1])) : (asLines(g)[0] ? [px(...asLines(g)[0][Math.floor(asLines(g)[0].length / 2)])] : []);
+        } else {
+          if (!t) continue;
+          for (const line of asLines(g)) {
+            if (line.length < 2) continue;
             const pts = line.map((c) => px(c[0], c[1]));
             let total = 0; const acc = [0];
             for (let i = 1; i < pts.length; i++) { total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); acc.push(total); }
-            const half = total / 2; let i = 1; while (i < acc.length && acc[i] < half) i++;
-            const tt = (half - acc[i - 1]) / Math.max(1e-6, acc[i] - acc[i - 1]);
-            const ax = pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * tt, ay = pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * tt;
-            lineAngle = Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]) * 180 / Math.PI;
-            if (lineAngle > 90) lineAngle -= 180; if (lineAngle < -90) lineAngle += 180;
-            if (font.widthOfTextAtSize(t, size) > total * 0.95) continue;
-            anchors = [[ax, ay, true]];
+            if (tw1 > total * 0.9) continue;
+            const at = (d) => { let i = 1; while (i < acc.length - 1 && acc[i] < d) i++; const tt = (d - acc[i - 1]) / Math.max(1e-6, acc[i] - acc[i - 1]); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * tt, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * tt, i]; };
+            const positions = total < spacing * 1.5 ? [total / 2] : [];
+            if (!positions.length) for (let d = spacing / 2; d <= total - spacing / 2 + 1; d += spacing) positions.push(d);
+            for (const d of positions) {
+              const half = tw1 / 2 + size * 0.4;
+              if (d - half < 0 || d + half > total) continue;
+              const [x0, y0] = at(d - half), [x1, y1] = at(d + half), [ax, ay] = at(d);
+              const chord = Math.hypot(x1 - x0, y1 - y0);
+              if (chord < tw1 * 0.98) continue; // the line folds back within the label
+              // straight enough: every vertex under the label within 0.35 em of the chord
+              const nx = -(y1 - y0) / chord, ny = (x1 - x0) / chord;
+              let bent = false;
+              for (let i = 0; i < pts.length; i++) { if (acc[i] <= d - half || acc[i] >= d + half) continue; const dev = Math.abs((pts[i][0] - x0) * nx + (pts[i][1] - y0) * ny); if (dev > size * 0.35) { bent = true; break; } }
+              if (bent) continue;
+              let ang = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI;
+              if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+              anchors.push([ax, ay, true, ang]);
+            }
           }
-          for (const a of anchors) {
-            const [ax, ay] = a;
-            if (!inRect(ax, ay)) continue;
-            // one drawing per symbol: the same label comes back from every tile it touches
-            const key = L.id + '|' + t + '|' + Math.round(ax / 3) + ',' + Math.round(ay / 3) + '|' + (icon || '');
-            if (seen.has(key)) continue;
-            seen.add(key);
-            const lines = wrap(t, font, size, maxWidthEm * size);
-            const tw = Math.max(0, ...lines.map((l) => font.widthOfTextAtSize(l, size)));
-            const th = lines.length * size * 1.1;
-            if (typeof icon === 'string' && icon) {
-              const rim = col((icon.match(/#[0-9a-f]{6}/i) || [null])[0], 1);
-              if (/^badge-/.test(icon)) {
-                const boxW = tw + 7 * S, boxH = th + 3 * S, dx = off[0] * size, dy = -off[1] * size;
-                const rc = rim || { r: 0.2, g: 0.2, b: 0.2 };
-                withAlpha(0.92, () => C.op('1 1 1 rg ' + rgbS(rc) + ' RG ' + f2(1.1 * S) + ' w 0 J 1 j [] 0 d ' + f2(ax + dx - boxW / 2) + ' ' + f2(ay + dy - boxH / 2) + ' ' + f2(boxW) + ' ' + f2(boxH) + ' re B'));
-                counts.icons++;
-              } else if (/^(stop|dot)-/.test(icon)) {
-                // as app.js draws them: 48 px canvas at pixelRatio 2 — radius
-                // 7.5 css px, rim 2.5 css px, × icon-size; a white disc rimmed
-                // in the line colour, the terminus (-t) filled with a darker rim
-                const c = rim || { r: 0, g: 0.35, b: 0.66 };
-                const term = /-t$/.test(icon);
-                const fill = term ? c : { r: 1, g: 1, b: 1 };
-                const edge = term ? { r: c.r * 0.65, g: c.g * 0.65, b: c.b * 0.65 } : c;
-                const r = 7.5 * iconSize * S, lw = 2.5 * iconSize * S;
-                const pre = rgbS(fill) + ' rg ' + rgbS(edge) + ' RG ' + f2(lw) + ' w 1 J 1 j [] 0 d ';
-                if (/^dot-/.test(icon)) {
-                  C.op(pre + circle(ax, ay, r) + ' B');
-                } else {
-                  // the half disc: the bulge on the pole's side of the roadway
-                  const th0 = (-iconRot) * Math.PI / 180; let d = '';
-                  for (let k = 0; k <= 16; k++) { const a0 = th0 + Math.PI * k / 16; d += f2(ax + r * Math.cos(a0)) + ' ' + f2(ay + r * Math.sin(a0)) + (k ? ' l ' : ' m '); }
-                  C.op(pre + d + 'h B');
-                }
-                counts.icons++;
+        }
+        for (const a of anchors) {
+          const [ax, ay] = a;
+          if (!inRect(ax, ay)) continue;
+          // one drawing per symbol: the same symbol comes back from every tile it touches
+          const key = L.id + '|' + t + '|' + Math.round(ax / 3) + ',' + Math.round(ay / 3) + '|' + (icon || '');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const lines = t ? wrap(t, font, size, maxWidthEm * size) : [];
+          const tw = Math.max(0, ...lines.map((l) => font.widthOfTextAtSize(l, size)));
+          const th = lines.length * size * 1.1;
+          if (typeof icon === 'string' && icon) {
+            const rim = col((icon.match(/#[0-9a-f]{6}/i) || [null])[0], 1);
+            if (/^badge-/.test(icon)) {
+              const boxW = tw + 7 * S, boxH = th + 3 * S, dx = off[0] * size, dy = -off[1] * size;
+              const rc = rim || { r: 0.2, g: 0.2, b: 0.2 };
+              alpha(0.92, () => out.push('1 1 1 rg ' + rgbS(rc) + ' RG ' + f2(1.1 * S) + ' w 0 J 1 j [] 0 d ' + f2(ax + dx - boxW / 2) + ' ' + f2(ay + dy - boxH / 2) + ' ' + f2(boxW) + ' ' + f2(boxH) + ' re B'));
+              placed.add([ax + dx - boxW / 2, ay + dy - boxH / 2, ax + dx + boxW / 2, ay + dy + boxH / 2]);
+              counts.icons++;
+            } else if (/^(stop|dot)-/.test(icon)) {
+              // The stop markers, larger than on screen (user rule: they must
+              // be visible on the poster): a white half disc rimmed in the
+              // line colour with the bulge on the pole's side, the terminus
+              // (-t) filled with a darker rim, metro stations a full disc.
+              const c = rim || { r: 0, g: 0.35, b: 0.66 };
+              const term = /-t$/.test(icon);
+              const fill = term ? c : { r: 1, g: 1, b: 1 };
+              const edge = term ? { r: c.r * 0.65, g: c.g * 0.65, b: c.b * 0.65 } : c;
+              const r = STOP_R * iconSize * S, lw = STOP_RIM * iconSize * S;
+              const pre = rgbS(fill) + ' rg ' + rgbS(edge) + ' RG ' + f2(lw) + ' w 1 J 1 j [] 0 d ';
+              if (/^dot-/.test(icon)) {
+                out.push(pre + circle(ax, ay, r) + ' B');
+                placed.add([ax - r - lw, ay - r - lw, ax + r + lw, ay + r + lw]);
+              } else {
+                const th0 = (-iconRot) * Math.PI / 180; let d = '';
+                let bx0 = ax, by0 = ay, bx1 = ax, by1 = ay;
+                for (let k = 0; k <= 16; k++) { const a0 = th0 + Math.PI * k / 16; const qx = ax + r * Math.cos(a0), qy = ay + r * Math.sin(a0); d += f2(qx) + ' ' + f2(qy) + (k ? ' l ' : ' m '); bx0 = Math.min(bx0, qx); by0 = Math.min(by0, qy); bx1 = Math.max(bx1, qx); by1 = Math.max(by1, qy); }
+                out.push(pre + d + 'h B');
+                placed.add([bx0 - lw, by0 - lw, bx1 + lw, by1 + lw]);
               }
+              counts.icons++;
             }
-            if (!t) continue;
-            // Placement: MapLibre placed this label collision-free but, for a
-            // variable-anchor label (stop names: eight anchors), does not say
-            // where — the same rule is replayed against every label drawn so
-            // far: the first anchor whose box is free. Fixed labels only
-            // register their box.
-            const ang = a[2] ? lineAngle : rot;
-            const th1 = (-ang) * Math.PI / 180;
-            const dir = [Math.cos(th1), Math.sin(th1)], perp = [-Math.sin(th1), Math.cos(th1)];
-            const R = radial * size;
-            const map8 = { left: [R, 0], right: [-R, 0], top: [0, -R], bottom: [0, R], 'top-left': [R * 0.7, -R * 0.7], 'top-right': [-R * 0.7, -R * 0.7], 'bottom-left': [R * 0.7, R * 0.7], 'bottom-right': [-R * 0.7, R * 0.7], center: [0, 0] };
-            const candidates = Array.isArray(vanch) && vanch.length && !a[2] ? vanch : [anchor];
-            let chosen = null;
-            for (const an of candidates) {
-              let hx = 0.5, hy = 0.5;
-              if (/left/.test(an)) hx = 0; if (/right/.test(an)) hx = 1;
-              if (/top/.test(an)) hy = 1; if (/bottom/.test(an)) hy = 0;
-              let ox = off[0] * size, oy = -off[1] * size;
-              if (radial && !a[2]) { const v = map8[an] || [0, 0]; ox += v[0]; oy += v[1]; }
-              const cx = ax + ox, cy = ay + oy;
-              const bx = cx + dir[0] * (tw / 2 - tw * hx) + perp[0] * (th / 2 - th * hy);
-              const by = cy + dir[1] * (tw / 2 - tw * hx) + perp[1] * (th / 2 - th * hy);
-              const ex = Math.abs(dir[0]) * tw / 2 + Math.abs(perp[0]) * th / 2, ey = Math.abs(dir[1]) * tw / 2 + Math.abs(perp[1]) * th / 2;
-              const box = [bx - ex, by - ey, bx + ex, by + ey];
-              const free = candidates.length === 1 || !placed.hit(box);
-              if (free) { chosen = { hx, hy, cx, cy, box }; break; }
-            }
-            if (!chosen) continue;
-            placed.add(chosen.box);
-            const rows = lines.map((ln, i) => {
-              const lw = font.widthOfTextAtSize(ln, size);
-              const rowY = (lines.length - 1 - i) * size * 1.1 - th * chosen.hy + th / 2 - size * 0.32;
-              const rowX = chosen.hx === 0 ? 0 : chosen.hx === 1 ? -lw : -lw / 2;
-              return { ln, x: chosen.cx + dir[0] * rowX + perp[0] * rowY, y: chosen.cy + dir[1] * rowX + perp[1] * rowY };
-            });
-            // the halo: the same text once more underneath, stroked (render
-            // mode 1) in the halo colour, the stroke twice the halo width
-            if (hc) {
-              C.op('q 1 Tr ' + f2(hw * 2 * S) + ' w 1 j ' + rgbS(hc) + ' RG');
-              for (const r of rows) C.op(textOp(font, fkey, r.ln, size, r.x, r.y, ang, ''));
-              C.op('Q');
-            }
-            withAlpha(tc.a, () => { for (const r of rows) { C.op(textOp(font, fkey, r.ln, size, r.x, r.y, ang, rgbS(tc) + ' rg ')); counts.texts++; } });
           }
-        } catch (e) { console.warn('pdf-export symbol', L.id, e); }
+          if (!t) continue;
+          const ang = a[2] ? a[3] : rot;
+          const th1 = (-ang) * Math.PI / 180;
+          const dir = [Math.cos(th1), Math.sin(th1)], perp = [-Math.sin(th1), Math.cos(th1)];
+          const R = radial * size;
+          const map8 = { left: [R, 0], right: [-R, 0], top: [0, -R], bottom: [0, R], 'top-left': [R * 0.7, -R * 0.7], 'top-right': [-R * 0.7, -R * 0.7], 'bottom-left': [R * 0.7, R * 0.7], 'bottom-right': [-R * 0.7, R * 0.7], center: [0, 0] };
+          const candidates = Array.isArray(vanch) && vanch.length && !a[2] ? vanch : [anchor];
+          let chosen = null;
+          for (const an of candidates) {
+            let hx = 0.5, hy = 0.5;
+            if (/left/.test(an)) hx = 0; if (/right/.test(an)) hx = 1;
+            if (/top/.test(an)) hy = 1; if (/bottom/.test(an)) hy = 0;
+            let ox = off[0] * size, oy = -off[1] * size;
+            if (radial && !a[2]) { const v = map8[an] || [0, 0]; ox += v[0]; oy += v[1]; }
+            const cx = ax + ox, cy = ay + oy;
+            const bx = cx + dir[0] * (tw / 2 - tw * hx) + perp[0] * (th / 2 - th * hy);
+            const by = cy + dir[1] * (tw / 2 - tw * hx) + perp[1] * (th / 2 - th * hy);
+            const ex = Math.abs(dir[0]) * tw / 2 + Math.abs(perp[0]) * th / 2, ey = Math.abs(dir[1]) * tw / 2 + Math.abs(perp[1]) * th / 2;
+            const pad = size * 0.15;
+            const box = [bx - ex - pad, by - ey - pad, bx + ex + pad, by + ey + pad];
+            if (allowOverlap || !placed.hit(box)) { chosen = { hx, hy, cx, cy, box }; break; }
+          }
+          if (!chosen) continue;
+          // a street name once per spacing: the same name near an already
+          // drawn one (any tile, any piece of the street) is skipped
+          if (a[2]) {
+            const spots = nameSpots.get(t) || [];
+            if (spots.some((q) => Math.hypot(q[0] - chosen.cx, q[1] - chosen.cy) < spacing * 0.8)) continue;
+            spots.push([chosen.cx, chosen.cy]); nameSpots.set(t, spots);
+          }
+          placed.add(chosen.box);
+          const rows = lines.map((ln, i) => {
+            const lw = font.widthOfTextAtSize(ln, size);
+            const rowY = (lines.length - 1 - i) * size * 1.1 - th * chosen.hy + th / 2 - size * 0.32;
+            const rowX = chosen.hx === 0 ? 0 : chosen.hx === 1 ? -lw : -lw / 2;
+            return { ln, x: chosen.cx + dir[0] * rowX + perp[0] * rowY, y: chosen.cy + dir[1] * rowX + perp[1] * rowY };
+          });
+          // the halo: the same text once more underneath, stroked (render
+          // mode 1) in the halo colour, the stroke twice the halo width
+          if (hc) {
+            out.push('q 1 Tr ' + f2(hw * 2 * S) + ' w 1 j ' + rgbS(hc) + ' RG');
+            for (const r of rows) out.push(textOp(font, fkey, r.ln, size, r.x, r.y, ang, ''));
+            out.push('Q');
+          }
+          alpha(tc.a, () => { for (const r of rows) { out.push(textOp(font, fkey, r.ln, size, r.x, r.y, ang, rgbS(tc) + ' rg ')); counts.texts++; } });
+        }
       }
-      if (unclipped) { leave(); C.op('q ' + f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) + ' re W n'); }
     }
   }
 })();
