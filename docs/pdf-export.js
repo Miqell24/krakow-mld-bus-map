@@ -13,10 +13,10 @@
 // own Roboto Condensed, embedded from web/vendor. pdf-lib and fontkit load
 // on the first PDF, not with the page.
 (() => {
-  const S = 0.75;            // PDF points per CSS pixel
   const PAD = 200;           // CSS px of tile overlap for label context
-  const TILE = 1024;         // CSS px of the inner tile
-  const MAX_PX = 12000;      // long edge of a tiled sheet, CSS px (9000 pt)
+  const TILE = 2048;         // CSS px of the inner tile
+  const MAX_PX = 65536;      // long edge of a poster sheet in CSS px — the PNG posters' ceiling
+  const MAX_PT = 14000;      // long edge of the PDF page in points (Acrobat's 200-inch limit)
   const MAP = () => window.__map || (typeof map !== 'undefined' && map && map.getZoom ? map : null);
 
   const VARIANTS = [
@@ -249,40 +249,120 @@
   const mxOf = (lng) => (lng + 180) / 360;
   const myOf = (lat) => { const s = Math.sin((lat * Math.PI) / 180); return 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI); };
 
+  // ---------- the poster styling of app.js (boostStyle is closure-private there) ----------
+  const scaleOut = (v, f) => {
+    if (typeof v === 'number') return v * f;
+    if (Array.isArray(v)) {
+      if (v[0] === 'interpolate') return v.map((x, i) => (i >= 3 && i % 2 === 0 ? scaleOut(x, f) : x));
+      if (v[0] === 'case') return v.map((x, i) => ((i >= 2 && i % 2 === 0) || i === v.length - 1 ? scaleOut(x, f) : x));
+      if (v[0] === '*') { const i = v.findIndex((x, j) => j > 0 && typeof x === 'number'); return i > 0 ? v.map((x, j) => (j === i ? x * f : x)) : ['*', f, v]; }
+    }
+    return v;
+  };
+  const boostStyle = (st, f) => {
+    st = JSON.parse(JSON.stringify(st));
+    for (const l of st.layers) {
+      if (l.type === 'symbol') {
+        if (l.layout && l.layout['text-size']) l.layout['text-size'] = scaleOut(l.layout['text-size'], f);
+        if (l.layout && l.layout['icon-size']) l.layout['icon-size'] = scaleOut(l.layout['icon-size'], f);
+        if (l.paint && l.paint['text-halo-width']) l.paint['text-halo-width'] = scaleOut(l.paint['text-halo-width'], f);
+      }
+      if (/^route-/.test(l.id) && l.paint && l.paint['line-width']) l.paint['line-width'] = scaleOut(l.paint['line-width'], f);
+    }
+    for (const id of ['highway-name-major', 'transit-street-names']) {
+      const mi = st.layers.findIndex((l) => l.id === id);
+      if (mi < 0) continue;
+      const [lyr] = st.layers.splice(mi, 1);
+      let last = -1;
+      st.layers.forEach((l, i) => { if (/^street-numbers/.test(l.id)) last = i; });
+      st.layers.splice(last >= 0 ? last + 1 : st.layers.length, 0, lyr);
+    }
+    for (const l of st.layers) {
+      if (l.id === 'stops-names') l.layout = { ...l.layout, 'text-radial-offset': 2.0 };
+      if (/^big-number-rows/.test(l.id)) l.layout = { ...l.layout, 'text-radial-offset': 1.2 };
+    }
+    return st;
+  };
+  const POSTER_BOOST = 1.4; // the PNG posters' factor
+
+  // ---------- the content stream ----------
+  // The page content is written directly — operator text deflated on the fly
+  // through CompressionStream — not through pdf-lib's drawing API: a whole
+  // city at poster zoom is millions of paths, and pdf-lib keeps every
+  // operator as an object in memory (and registered a graphics state per
+  // opacity per path). Only the compressed bytes ever exist in one piece.
+  const enc = new TextEncoder();
+  class Content {
+    constructor() {
+      this.parts = []; this.size = 0; this.chunks = [];
+      this.cs = new CompressionStream('deflate'); // zlib framing = /FlateDecode
+      this.w = this.cs.writable.getWriter();
+      this.reading = (async () => { const rd = this.cs.readable.getReader(); for (;;) { const { value, done } = await rd.read(); if (done) break; this.chunks.push(value); } })();
+    }
+    op(s) { this.parts.push(s); this.size += s.length; }
+    async flush() { if (!this.parts.length) return; const s = this.parts.join('\n') + '\n'; this.parts = []; this.size = 0; await this.w.write(enc.encode(s)); }
+    async finish() {
+      await this.flush(); await this.w.close(); await this.reading;
+      const n = this.chunks.reduce((a, c) => a + c.length, 0);
+      const out = new Uint8Array(n); let o = 0;
+      for (const c of this.chunks) { out.set(c, o); o += c.length; }
+      return out;
+    }
+  }
+  const f1 = (x) => { const r = Math.round(x * 10) / 10; return Number.isFinite(r) ? String(r) : '0'; };
+  const f2 = (x) => { const r = Math.round(x * 100) / 100; return Number.isFinite(r) ? String(r) : '0'; };
+  const f3 = (x) => String(Math.round(Math.max(0, Math.min(1, x)) * 1000) / 1000);
+  const rgbS = (c) => f3(c.r) + ' ' + f3(c.g) + ' ' + f3(c.b);
+  const KAPPA = 0.5523;
+
   // ---------- the export ----------
   async function exportPdf(m0, bbox, setLbl) {
-    const { PDFDocument, rgb, degrees, PDFName, PDFString, PDFOperator, PDFNumber, LineCapStyle } = PDFLib;
+    const { PDFDocument, PDFName, PDFString } = PDFLib;
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);
     const [fReg, fBold] = await Promise.all(['vendor/RobotoCondensed-Regular.ttf', 'vendor/RobotoCondensed-Bold.ttf']
-      .map(async (u) => doc.embedFont(await (await fetch(u)).arrayBuffer(), { subset: true }))); // eslint-disable-line no-undef
+      .map(async (u) => doc.embedFont(await (await fetch(u)).arrayBuffer(), { subset: true })));
     const charset = { reg: new Set(fReg.getCharacterSet()), bold: new Set(fBold.getCharacterSet()) };
     doc.setTitle(document.title);
     doc.setProducer('transit-maps pdf-export');
     doc.setCreator('miqell24.github.io/transit-maps');
+    const ctx = doc.context;
 
-    // sheet geometry: the viewport, or the bbox at a poster zoom
-    let W, H, Z, tlx, tly, world, tiles = null;
+    // Sheet geometry. The current view is the viewport at the screen's zoom.
+    // The posters (select area, whole map) use the PNG posters' rule: the
+    // bbox at z15.3 — or the screen's zoom when that is deeper, up to 17.3 —
+    // and the poster boost. The sheet is scaled so its long edge stays
+    // within 14 000 pt (Acrobat's 200-inch page limit; vectors lose nothing).
+    let W, H, Z, S, tlx, tly, world, tiles = null;
     if (!bbox) {
       const cont = m0.getContainer();
-      W = cont.clientWidth; H = cont.clientHeight; Z = m0.getZoom();
+      W = cont.clientWidth; H = cont.clientHeight; Z = m0.getZoom(); S = 0.75;
     } else {
       const fx = mxOf(bbox[2]) - mxOf(bbox[0]), fy = myOf(bbox[1]) - myOf(bbox[3]);
       const zFit = Math.log2(MAX_PX / (512 * Math.max(fx, fy)));
       Z = Math.min(zFit, Math.max(15.3, Math.min(m0.getZoom(), 17.3)));
       world = 512 * 2 ** Z;
       W = Math.round(fx * world); H = Math.round(fy * world);
+      S = Math.min(0.75, MAX_PT / Math.max(W, H));
       tlx = mxOf(bbox[0]) * world; tly = myOf(bbox[3]) * world;
-      const cols = Math.ceil(W / TILE), rows = Math.ceil(H / TILE);
-      tiles = { cols, rows };
+      tiles = { cols: Math.ceil(W / TILE), rows: Math.ceil(H / TILE) };
     }
-    const page = doc.addPage([W * S, H * S]);
-    const ctx = doc.context;
+    const PW = W * S, PH = H * S;
+    const page = doc.addPage([PW, PH]);
+    page.node.setFontDictionary(PDFName.of('F1'), fReg.ref);
+    page.node.setFontDictionary(PDFName.of('F2'), fBold.ref);
+    const C = new Content();
 
     // PDF layers: one optional content group per family of style layers
     const ocgs = new Map(); const ocgRefs = []; const props = ctx.obj({});
     const groupOf = (id, type, source) => {
-      if (source === 'openmaptiles' || source === 'ne2_shaded' || id === 'background') return type === 'symbol' ? 'Base map · names' : 'Base map';
+      if (source === 'openmaptiles' || source === 'ne2_shaded' || id === 'background') {
+        if (type === 'symbol') return 'Base map · names';
+        if (id === 'building') return 'Base map · buildings';
+        if (id === 'highway_path') return 'Base map · paths';
+        if (/^(highway|road|tunnel|railway|boundary|aeroway-(taxiway|runway))/.test(id)) return 'Base map · roads & rail';
+        return 'Base map · land & water';
+      }
       if (/^(route|corridor|strand)-/.test(id)) return 'Transit lines';
       if (/^stops-terminus-badges/.test(id)) return 'Terminus badges';
       if (/^stops-terminus-names|^stops-names|^stops-metro-names/.test(id)) return 'Stop names';
@@ -302,50 +382,39 @@
     let openGroup = null;
     const enter = (name) => {
       if (openGroup === name) return;
-      if (openGroup) page.pushOperators(PDFOperator.of('EMC'));
-      page.pushOperators(PDFOperator.of('BDC', [PDFName.of('OC'), PDFName.of(ocgFor(name))]));
+      if (openGroup) C.op('EMC');
+      C.op('/OC /' + ocgFor(name) + ' BDC');
       openGroup = name;
     };
-    const leave = () => { if (openGroup) { page.pushOperators(PDFOperator.of('EMC')); openGroup = null; } };
-    const clipTo = (x0, y0, x1, y1) => page.pushOperators(PDFOperator.of('re', [PDFNumber.of(x0), PDFNumber.of(y0), PDFNumber.of(x1 - x0), PDFNumber.of(y1 - y0)]), PDFOperator.of('W'), PDFOperator.of('n'));
-    const gsave = () => page.pushOperators(PDFOperator.of('q'));
-    const grestore = () => page.pushOperators(PDFOperator.of('Q'));
-
-    // placed label boxes in a 48-pt grid: the anchor replay asks "is this box
-    // free" for every stop name, and a whole-map sheet has tens of thousands
-    const G = 48; const cells = new Map();
-    const placed = {
-      hit(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const c = cells.get(i + ',' + j); if (c && c.some((q) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) return true; } return false; },
-      add(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const k = i + ',' + j; let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(b); } },
-    };
-    // pdf-lib registers a NEW ExtGState (and a new font resource key) on
-    // every draw call that carries opacity or a font, and looks each key up
-    // linearly — quadratic on a sheet with 200 000 paths. One shared state
-    // per opacity value instead, and the font switched only when it changes.
+    const leave = () => { if (openGroup) { C.op('EMC'); openGroup = null; } };
+    // one shared graphics state per opacity value
     const gsKeys = new Map();
-    const alpha = (a) => {
+    const alphaKey = (a) => {
       const k = Math.round(Math.max(0, Math.min(1, a)) * 100);
       if (k >= 100) return null;
-      if (!gsKeys.has(k)) gsKeys.set(k, page.node.newExtGState('GSa', ctx.obj({ Type: 'ExtGState', ca: k / 100, CA: k / 100 })));
+      if (!gsKeys.has(k)) gsKeys.set(k, page.node.newExtGState('GSa', ctx.obj({ Type: 'ExtGState', ca: k / 100, CA: k / 100 })).toString());
       return gsKeys.get(k);
     };
-    const withAlpha = (a, fn) => { const key = alpha(a); if (!key) return fn(); page.pushOperators(PDFOperator.of('q'), PDFOperator.of('gs', [key])); fn(); page.pushOperators(PDFOperator.of('Q')); };
-    let curFont = null;
-    const useFont = (f) => { if (f !== curFont) { page.setFont(f); curFont = f; } };
-    const halo = (c, lw, fn) => {
-      page.pushOperators(PDFOperator.of('q'), PDFOperator.of('RG', [PDFNumber.of(c.color.red), PDFNumber.of(c.color.green), PDFNumber.of(c.color.blue)]), PDFOperator.of('w', [PDFNumber.of(lw)]), PDFOperator.of('j', [PDFNumber.of(1)]), PDFOperator.of('Tr', [PDFNumber.of(1)]));
-      fn();
-      page.pushOperators(PDFOperator.of('Q'));
+    const withAlpha = (a, fn) => { const k = alphaKey(a); if (!k) return fn(); C.op('q ' + k + ' gs'); fn(); C.op('Q'); };
+    const state = {
+      C, S, W, H, PW, PH, fReg, fBold, enter, leave, groupOf, withAlpha,
+      placed: (() => { const G = 48; const cells = new Map(); return {
+        hit(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const c = cells.get(i + ',' + j); if (c && c.some((q) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) return true; } return false; },
+        add(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const k = i + ',' + j; let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(b); } },
+      }; })(),
+      seen: new Set(),
+      counts: { layers: 0, fills: 0, lines: 0, texts: 0, icons: 0 },
+      clean: (t, bold) => [...String(t)].filter((ch) => (bold ? charset.bold : charset.reg).has(ch.codePointAt(0)) || ch === ' ').join(''),
+      T: { idle: 0, draw: 0, query: 0 },
     };
-    const state = { withAlpha, useFont, halo, placed, seen: new Set(), counts: { layers: 0, fills: 0, lines: 0, texts: 0, icons: 0 }, clean: (t, bold) => [...String(t)].filter((ch) => (bold ? charset.bold : charset.reg).has(ch.codePointAt(0)) || ch === ' ').join(''), fReg, fBold, rgb, degrees, LineCapStyle, page, W, H, Z, enter, leave, groupOf, gsave, grestore, clipTo };
 
     if (!bbox) {
       const px = (lng, lat) => { const q = m0.project([lng, lat]); return [q.x * S, (H - q.y) * S]; };
-      gsave(); clipTo(0, 0, W * S, H * S);
+      C.op('q 0 0 ' + f1(PW) + ' ' + f1(PH) + ' re W n');
       drawScene(m0, px, null, state);
-      leave(); grestore();
+      leave(); C.op('Q');
     } else {
-      // the offscreen map: the live style, the live images, a tile-sized viewport
+      // the offscreen map: the poster style, the live images, a tile-sized viewport
       const contCSS = TILE + 2 * PAD;
       const div = document.createElement('div');
       div.style.cssText = `position:fixed;left:-100000px;top:0;width:${contCSS}px;height:${contCSS}px;`;
@@ -353,18 +422,19 @@
       const px2ll = (x, y) => { const n = Math.PI - (2 * Math.PI * y) / world; return [(x / world) * 360 - 180, (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))]; };
       let m2 = null;
       try {
-        m2 = new maplibregl.Map({ container: div, style: m0.getStyle(), center: px2ll(tlx + W / 2, tly + H / 2), zoom: Z, attributionControl: false, interactive: false, fadeDuration: 0 });
-        const idle = () => new Promise((res, rej) => { const t = setTimeout(() => rej(new Error('tile render timeout')), 60000); m2.once('idle', () => { clearTimeout(t); res(); }); });
+        m2 = new maplibregl.Map({ container: div, style: boostStyle(m0.getStyle(), POSTER_BOOST), center: px2ll(tlx + W / 2, tly + H / 2), zoom: Z, attributionControl: false, interactive: false, fadeDuration: 0 });
+        const idle = () => new Promise((res, rej) => { const t = setTimeout(() => rej(new Error('tile render timeout')), 90000); m2.once('idle', () => { clearTimeout(t); res(); }); });
         await idle();
         // the canvas-drawn icons (stop discs, badge boxes) live only in the live map
         try { for (const id of m0.listImages()) { const im = m0.getImage(id); if (im && !m2.hasImage(id)) m2.addImage(id, im.data, { pixelRatio: im.pixelRatio, sdf: im.sdf }); } } catch (e) { console.warn('icons not copied', e); }
         m2.triggerRepaint(); await idle();
-        // the base colour once, under everything
         const px = (lng, lat) => [(mxOf(lng) * world - tlx) * S, (H - (myOf(lat) * world - tly)) * S];
-        let k = 0; const T = { idle: 0, draw: 0, query: 0 }; state.T = T;
+        let k = 0; const n = tiles.rows * tiles.cols; const T = state.T; const t00 = performance.now();
         for (let j = 0; j < tiles.rows; j++) {
           for (let i = 0; i < tiles.cols; i++) {
-            setLbl(`Drawing ${++k}/${tiles.rows * tiles.cols}…`);
+            k++;
+            const el = (performance.now() - t00) / 1000, eta = k > 3 ? Math.round((el / (k - 1)) * (n - k + 1)) : null;
+            setLbl(`Drawing ${k}/${n}…` + (eta !== null ? ` ~${eta >= 90 ? Math.round(eta / 60) + ' min' : eta + ' s'} left` : ''));
             const x0 = i * TILE, y0 = j * TILE;
             const w = Math.min(TILE, W - x0), h = Math.min(TILE, H - y0);
             m2.jumpTo({ center: px2ll(tlx + x0 + w / 2, tly + y0 + h / 2), zoom: Z });
@@ -374,11 +444,12 @@
             T.idle += performance.now() - t0;
             // page rect of this tile (PDF y up)
             const rect = [x0 * S, (H - y0 - h) * S, (x0 + w) * S, (H - y0) * S];
-            gsave(); clipTo(rect[0], rect[1], rect[2], rect[3]);
+            C.op('q ' + f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) + ' re W n');
             const t1 = performance.now();
             drawScene(m2, px, rect, state);
             T.draw += performance.now() - t1;
-            leave(); grestore();
+            leave(); C.op('Q');
+            await C.flush();
           }
         }
       } finally {
@@ -390,20 +461,22 @@
     const attr = (document.querySelector('.maplibregl-ctrl-attrib-inner') || {}).textContent || '© OpenStreetMap contributors · OpenFreeMap';
     enter('Attribution');
     const at = state.clean(attr.replace(/\s+/g, ' ').trim(), false);
-    const asz = Math.max(6, Math.min(9, W * S / 120));
+    const asz = Math.max(6, Math.min(9, PW / 120));
     const aw = fReg.widthOfTextAtSize(at, asz);
-    withAlpha(0.82, () => page.drawRectangle({ x: W * S - aw - asz, y: 0, width: aw + asz, height: asz * 1.8, color: rgb(1, 1, 1) }));
-    useFont(fReg);
-    page.drawText(at, { x: W * S - aw - asz / 2, y: asz * 0.5, size: asz, color: rgb(0.2, 0.2, 0.2) });
+    withAlpha(0.82, () => C.op('1 1 1 rg ' + f2(PW - aw - asz) + ' 0 ' + f2(aw + asz) + ' ' + f2(asz * 1.8) + ' re f'));
+    C.op('BT /F1 ' + f2(asz) + ' Tf 0.2 0.2 0.2 rg 1 0 0 1 ' + f2(PW - aw - asz / 2) + ' ' + f2(asz * 0.5) + ' Tm ' + fReg.encodeText(at).toString() + ' Tj ET');
     leave();
+    setLbl('Saving…');
+    const bytes = await C.finish();
+    const stream = ctx.stream(bytes, { Filter: 'FlateDecode' });
+    page.node.set(PDFName.of('Contents'), ctx.register(stream));
     if (ocgRefs.length) {
       page.node.set(PDFName.of('Resources'), page.node.Resources() || ctx.obj({}));
       page.node.Resources().set(PDFName.of('Properties'), props);
       doc.catalog.set(PDFName.of('OCProperties'), ctx.obj({ OCGs: ocgRefs, D: ctx.obj({ Order: ocgRefs, ON: ocgRefs, BaseState: 'ON' }) }));
     }
-    console.log('pdf-export', { W, H, Z: Math.round(Z * 100) / 100, tiles, ...state.counts, ...(state.T ? { ms: Object.fromEntries(Object.entries(state.T).map(([k, v]) => [k, Math.round(v)])) } : {}) });
-    setLbl('Saving…');
-    return doc.save();
+    console.log('pdf-export', { W, H, Z: Math.round(Z * 100) / 100, S: Math.round(S * 1000) / 1000, tiles, ...state.counts, content: bytes.length, ms: Object.fromEntries(Object.entries(state.T).map(([k, v]) => [k, Math.round(v)])) });
+    return doc.save({ useObjectStreams: false });
   }
 
   // Draws everything the map m has on screen into the page, through px()
@@ -412,19 +485,25 @@
   // their anchor is inside it, so the overlap between tiles is context, not
   // duplication.
   function drawScene(m, px, rect, st) {
-    const { page, W, H, Z: z0, rgb, degrees, LineCapStyle, fReg, fBold, clean, placed, seen, counts, enter, leave, groupOf, gsave, grestore, clipTo, withAlpha, useFont, halo } = st;
+    const { C, S, PH, fReg, fBold, clean, placed, seen, counts, enter, leave, groupOf, withAlpha } = st;
     const z = m.getZoom();
-    const col = (c, alphaMul) => { const k = parseColor(c); return k ? { color: rgb(Math.max(0, Math.min(1, k.r)), Math.max(0, Math.min(1, k.g)), Math.max(0, Math.min(1, k.b))), opacity: Math.max(0, Math.min(1, k.a * (alphaMul ?? 1))) } : null; };
+    const col = (c, alphaMul) => { const k = parseColor(c); return k ? { r: k.r, g: k.g, b: k.b, a: Math.max(0, Math.min(1, k.a * (alphaMul ?? 1))) } : null; };
     const asRings = (g) => (g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []);
     const asLines = (g) => (g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : g.type === 'Polygon' ? g.coordinates : g.type === 'MultiPolygon' ? g.coordinates.flat() : []);
     const asPoints = (g) => (g.type === 'Point' ? [g.coordinates] : g.type === 'MultiPoint' ? g.coordinates : []);
-    const PH = H * S;
+    // a path in page space, vertices closer than 0.15 pt to the last one
+    // written dropped (invisible at any print size, a third of the file)
+    const EPS = 0.15;
     const pathOf = (coords, close) => {
-      let d = '';
-      coords.forEach((c, i) => { const [x, y] = px(c[0], c[1]); d += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + (PH - y).toFixed(2); });
-      return d + (close ? 'Z' : '');
+      let d = '', lx = NaN, ly = NaN, n = 0;
+      for (let i = 0; i < coords.length; i++) {
+        const [x, y] = px(coords[i][0], coords[i][1]);
+        if (i && i < coords.length - 1 && Math.abs(x - lx) < EPS && Math.abs(y - ly) < EPS) continue;
+        d += f1(x) + ' ' + f1(y) + (n ? ' l ' : ' m '); lx = x; ly = y; n++;
+      }
+      if (n < 2 && !close) return '';
+      return d + (close ? 'h' : '');
     };
-    const svgOpts = (o) => ({ x: 0, y: PH, ...o });
     const inRect = (x, y) => !rect || (x >= rect[0] && x < rect[2] && y >= rect[1] && y < rect[3]);
     const cw = m.getContainer().clientWidth, ch = m.getContainer().clientHeight;
     const rectOnScreen = rect ? [PAD, PAD, cw - PAD, ch - PAD] : null;
@@ -435,16 +514,28 @@
       if (cur) out.push(cur);
       return out;
     };
+    const circle = (x, y, r) => {
+      const k = KAPPA * r;
+      return f2(x + r) + ' ' + f2(y) + ' m ' +
+        f2(x + r) + ' ' + f2(y + k) + ' ' + f2(x + k) + ' ' + f2(y + r) + ' ' + f2(x) + ' ' + f2(y + r) + ' c ' +
+        f2(x - k) + ' ' + f2(y + r) + ' ' + f2(x - r) + ' ' + f2(y + k) + ' ' + f2(x - r) + ' ' + f2(y) + ' c ' +
+        f2(x - r) + ' ' + f2(y - k) + ' ' + f2(x - k) + ' ' + f2(y - r) + ' ' + f2(x) + ' ' + f2(y - r) + ' c ' +
+        f2(x + k) + ' ' + f2(y - r) + ' ' + f2(x + r) + ' ' + f2(y - k) + ' ' + f2(x + r) + ' ' + f2(y) + ' c h';
+    };
+    const textOp = (font, key, str, size, x, y, ang, colorOp) => {
+      const th = (-ang) * Math.PI / 180, a = Math.cos(th), b = Math.sin(th);
+      return 'BT /' + key + ' ' + f2(size) + ' Tf ' + colorOp + f2(a) + ' ' + f2(b) + ' ' + f2(-b) + ' ' + f2(a) + ' ' + f2(x) + ' ' + f2(y) + ' Tm ' + font.encodeText(str).toString() + ' Tj ET';
+    };
 
-    // one query for the whole scene (400 layers × 120 tiles was the slow
-    // part), bucketed by layer id; the style order still drives the drawing
+    // one query for the whole scene, bucketed by layer id; the style order
+    // still drives the drawing
     const byLayer = new Map();
     const tq = performance.now();
     try {
       const all = rectOnScreen ? m.queryRenderedFeatures([[rectOnScreen[0] - 40, rectOnScreen[1] - 40], [rectOnScreen[2] + 40, rectOnScreen[3] + 40]]) : m.queryRenderedFeatures();
       for (const f of all) { const id = f.layer && f.layer.id; if (!id) continue; let a = byLayer.get(id); if (!a) byLayer.set(id, a = []); a.push(f); }
     } catch (e) { console.warn('pdf-export query', e); }
-    if (st.T) st.T.query += performance.now() - tq;
+    st.T.query += performance.now() - tq;
     for (const L of m.getStyle().layers) {
       if (L.layout && L.layout.visibility === 'none') continue;
       if (L.minzoom !== undefined && z < L.minzoom) continue;
@@ -453,7 +544,7 @@
       if (L.type === 'background') {
         enter(group);
         const c = col(ev(m.getPaintProperty(L.id, 'background-color'), z, {}), num(ev(m.getPaintProperty(L.id, 'background-opacity'), z, {}), 1));
-        if (c) withAlpha(c.opacity, () => page.drawRectangle({ x: rect ? rect[0] : 0, y: rect ? rect[1] : 0, width: rect ? rect[2] - rect[0] : W * S, height: rect ? rect[3] - rect[1] : PH, color: c.color }));
+        if (c) withAlpha(c.a, () => C.op(rgbS(c) + ' rg ' + (rect ? f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) : '0 0 ' + f1(st.PW) + ' ' + f1(PH)) + ' re f'));
         continue;
       }
       if (!['fill', 'line', 'symbol', 'circle'].includes(L.type)) continue;
@@ -465,7 +556,7 @@
       // symbols are drawn outside the tile clip (their anchor test keeps
       // the overlap from duplicating them)
       const unclipped = rect && L.type === 'symbol';
-      if (unclipped) { leave(); grestore(); }
+      if (unclipped) { leave(); C.op('Q'); }
       enter(group);
       const paint = (k) => m.getPaintProperty(L.id, k);
       const layout = (k) => m.getLayoutProperty(L.id, k);
@@ -476,34 +567,38 @@
         if (L.type === 'fill') {
           const c = col(ev(paint('fill-color'), z, p), num(ev(paint('fill-opacity'), z, p), 1));
           if (!c) continue;
-          withAlpha(c.opacity, () => { for (const rings of asRings(g)) { page.drawSvgPath(rings.map((r) => pathOf(r, true)).join(' '), svgOpts({ color: c.color, borderWidth: 0 })); counts.fills++; } });
+          withAlpha(c.a, () => {
+            for (const rings of asRings(g)) { const d = rings.map((r) => pathOf(r, true)).join(' '); if (d) { C.op(rgbS(c) + ' rg ' + d + ' f*'); counts.fills++; } }
+          });
           const oc = col(ev(paint('fill-outline-color'), z, p), 1);
-          if (oc) withAlpha(oc.opacity, () => { for (const rings of asRings(g)) page.drawSvgPath(rings.map((r) => pathOf(r, true)).join(' '), svgOpts({ borderColor: oc.color, borderWidth: 0.4 * S })); });
+          if (oc) withAlpha(oc.a, () => { for (const rings of asRings(g)) { const d = rings.map((r) => pathOf(r, true)).join(' '); if (d) C.op(rgbS(oc) + ' RG ' + f2(0.4 * S) + ' w ' + d + ' S'); } });
         } else if (L.type === 'line') {
           const c = col(ev(paint('line-color'), z, p), num(ev(paint('line-opacity'), z, p), 1));
           const w = num(ev(paint('line-width'), z, p), 1) * S;
           if (!c || w <= 0) continue;
           const dash = ev(paint('line-dasharray'), z, p);
           const cap = ev(layout('line-cap'), z, p);
-          withAlpha(c.opacity, () => {
+          const pre = rgbS(c) + ' RG ' + f2(w) + ' w ' + (cap === 'round' ? '1 J 1 j' : cap === 'square' ? '2 J 0 j' : '0 J 0 j') + (Array.isArray(dash) ? ' [' + dash.map((d) => f2(Math.max(0.01, d * w))).join(' ') + '] 0 d' : ' [] 0 d');
+          withAlpha(c.a, () => {
             for (const line of asLines(g)) {
               if (line.length < 2) continue;
-              page.drawSvgPath(pathOf(line, false), svgOpts({ borderColor: c.color, borderWidth: w, borderLineCap: cap === 'round' ? LineCapStyle.Round : cap === 'square' ? LineCapStyle.Projecting : LineCapStyle.Butt, borderDashArray: Array.isArray(dash) ? dash.map((d) => Math.max(0.01, d * w)) : undefined }));
-              counts.lines++;
+              const d = pathOf(line, false);
+              if (d) { C.op(pre + ' ' + d + ' S'); counts.lines++; }
             }
           });
         } else if (L.type === 'circle') {
           const c = col(ev(paint('circle-color'), z, p), num(ev(paint('circle-opacity'), z, p), 1));
           const r = num(ev(paint('circle-radius'), z, p), 3) * S;
-          for (const pt of asPoints(g)) { const [x, y] = px(pt[0], pt[1]); if (!inRect(x, y)) continue; if (c) withAlpha(c.opacity, () => page.drawCircle({ x, y, size: r, color: c.color })); counts.icons++; }
+          if (!c) continue;
+          for (const pt of asPoints(g)) { const [x, y] = px(pt[0], pt[1]); if (!inRect(x, y)) continue; withAlpha(c.a, () => C.op(rgbS(c) + ' rg ' + circle(x, y, r) + ' f')); counts.icons++; }
         } else if (L.type === 'symbol') try {
           const textRaw = ev(layout('text-field'), z, p);
           const text = textRaw === undefined || textRaw === null ? '' : String(textRaw);
           const size = num(ev(layout('text-size'), z, p), 12) * S;
           const fonts = ev(layout('text-font'), z, p);
           const bold = Array.isArray(fonts) ? /bold/i.test(fonts[0] || '') : /bold/i.test(String(fonts || ''));
-          const font = bold ? fBold : fReg;
-          const tc = col(ev(paint('text-color'), z, p), num(ev(paint('text-opacity'), z, p), 1)) || { color: rgb(0, 0, 0), opacity: 1 };
+          const font = bold ? fBold : fReg, fkey = bold ? 'F2' : 'F1';
+          const tc = col(ev(paint('text-color'), z, p), num(ev(paint('text-opacity'), z, p), 1)) || { r: 0, g: 0, b: 0, a: 1 };
           const hw = num(ev(paint('text-halo-width'), z, p), 0);
           const hc = hw > 0 ? col(ev(paint('text-halo-color'), z, p), 1) : null;
           const rot = num(ev(layout('text-rotate'), z, p), 0);
@@ -550,15 +645,27 @@
               const rim = col((icon.match(/#[0-9a-f]{6}/i) || [null])[0], 1);
               if (/^badge-/.test(icon)) {
                 const boxW = tw + 7 * S, boxH = th + 3 * S, dx = off[0] * size, dy = -off[1] * size;
-                withAlpha(0.92, () => page.drawRectangle({ x: ax + dx - boxW / 2, y: ay + dy - boxH / 2, width: boxW, height: boxH, color: rgb(1, 1, 1), borderColor: rim ? rim.color : rgb(0.2, 0.2, 0.2), borderWidth: 1.1 * S }));
+                const rc = rim || { r: 0.2, g: 0.2, b: 0.2 };
+                withAlpha(0.92, () => C.op('1 1 1 rg ' + rgbS(rc) + ' RG ' + f2(1.1 * S) + ' w 0 J 1 j [] 0 d ' + f2(ax + dx - boxW / 2) + ' ' + f2(ay + dy - boxH / 2) + ' ' + f2(boxW) + ' ' + f2(boxH) + ' re B'));
                 counts.icons++;
-              } else if (/^stop-/.test(icon)) {
-                const r = 4.2 * iconSize * S, th0 = (-iconRot) * Math.PI / 180, pts = [];
-                for (let k = 0; k <= 12; k++) { const a0 = th0 + Math.PI * k / 12; pts.push([ax + r * Math.cos(a0), ay + r * Math.sin(a0)]); }
-                page.drawSvgPath(pts.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(2) + ' ' + (PH - q[1]).toFixed(2)).join('') + 'Z', svgOpts({ color: rim ? rim.color : rgb(0, 0.35, 0.66), borderColor: rgb(1, 1, 1), borderWidth: 0.6 * S }));
-                counts.icons++;
-              } else if (/^dot-/.test(icon)) {
-                page.drawCircle({ x: ax, y: ay, size: 4.5 * iconSize * S, color: rim ? rim.color : rgb(0, 0.35, 0.66), borderColor: rgb(1, 1, 1), borderWidth: 0.8 * S });
+              } else if (/^(stop|dot)-/.test(icon)) {
+                // as app.js draws them: 48 px canvas at pixelRatio 2 — radius
+                // 7.5 css px, rim 2.5 css px, × icon-size; a white disc rimmed
+                // in the line colour, the terminus (-t) filled with a darker rim
+                const c = rim || { r: 0, g: 0.35, b: 0.66 };
+                const term = /-t$/.test(icon);
+                const fill = term ? c : { r: 1, g: 1, b: 1 };
+                const edge = term ? { r: c.r * 0.65, g: c.g * 0.65, b: c.b * 0.65 } : c;
+                const r = 7.5 * iconSize * S, lw = 2.5 * iconSize * S;
+                const pre = rgbS(fill) + ' rg ' + rgbS(edge) + ' RG ' + f2(lw) + ' w 1 J 1 j [] 0 d ';
+                if (/^dot-/.test(icon)) {
+                  C.op(pre + circle(ax, ay, r) + ' B');
+                } else {
+                  // the half disc: the bulge on the pole's side of the roadway
+                  const th0 = (-iconRot) * Math.PI / 180; let d = '';
+                  for (let k = 0; k <= 16; k++) { const a0 = th0 + Math.PI * k / 16; d += f2(ax + r * Math.cos(a0)) + ' ' + f2(ay + r * Math.sin(a0)) + (k ? ' l ' : ' m '); }
+                  C.op(pre + d + 'h B');
+                }
                 counts.icons++;
               }
             }
@@ -591,7 +698,6 @@
             }
             if (!chosen) continue;
             placed.add(chosen.box);
-            useFont(font);
             const rows = lines.map((ln, i) => {
               const lw = font.widthOfTextAtSize(ln, size);
               const rowY = (lines.length - 1 - i) * size * 1.1 - th * chosen.hy + th / 2 - size * 0.32;
@@ -601,16 +707,15 @@
             // the halo: the same text once more underneath, stroked (render
             // mode 1) in the halo colour, the stroke twice the halo width
             if (hc) {
-              halo(hc, hw * 2 * S, () => rows.forEach((r) => page.drawText(r.ln, { x: r.x, y: r.y, size, rotate: degrees(-ang) })));
+              C.op('q 1 Tr ' + f2(hw * 2 * S) + ' w 1 j ' + rgbS(hc) + ' RG');
+              for (const r of rows) C.op(textOp(font, fkey, r.ln, size, r.x, r.y, ang, ''));
+              C.op('Q');
             }
-            withAlpha(tc.opacity, () => rows.forEach((r) => {
-              page.drawText(r.ln, { x: r.x, y: r.y, size, color: tc.color, rotate: degrees(-ang) });
-              counts.texts++;
-            }));
+            withAlpha(tc.a, () => { for (const r of rows) { C.op(textOp(font, fkey, r.ln, size, r.x, r.y, ang, rgbS(tc) + ' rg ')); counts.texts++; } });
           }
         } catch (e) { console.warn('pdf-export symbol', L.id, e); }
       }
-      if (unclipped) { leave(); gsave(); clipTo(rect[0], rect[1], rect[2], rect[3]); }
+      if (unclipped) { leave(); C.op('q ' + f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) + ' re W n'); }
     }
   }
 })();
