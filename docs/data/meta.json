@@ -11066,906 +11066,6 @@
       "rank": 1
     },
     {
-      "line": "601",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Mydlniki Wapiennik SKA P+R",
-          "variants": 5,
-          "tripCount": 15,
-          "stops": 63,
-          "lengthKm": 31.71,
-          "stats": {
-            "observations": 1577,
-            "matched": 1577,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3919365394134538,
-            "roundaboutSegs": 64,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Zajezdnia Bieńczyce",
-          "variants": 4,
-          "tripCount": 15,
-          "stops": 59,
-          "lengthKm": 30.47,
-          "stats": {
-            "observations": 1523,
-            "matched": 1523,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.44867268310261693,
-            "roundaboutSegs": 29,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "605",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Teatr Słowackiego",
-          "variants": 2,
-          "tripCount": 25,
-          "stops": 23,
-          "lengthKm": 13.07,
-          "stats": {
-            "observations": 639,
-            "matched": 639,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.34004791713532223,
-            "roundaboutSegs": 13,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Złocień",
-          "variants": 3,
-          "tripCount": 25,
-          "stops": 23,
-          "lengthKm": 13.07,
-          "stats": {
-            "observations": 654,
-            "matched": 654,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3324803472670759,
-            "roundaboutSegs": 4,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "608",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Kliny",
-          "variants": 2,
-          "tripCount": 25,
-          "stops": 59,
-          "lengthKm": 31.85,
-          "stats": {
-            "observations": 1592,
-            "matched": 1592,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.37368696287905184,
-            "roundaboutSegs": 31,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Os. Na Stoku",
-          "variants": 2,
-          "tripCount": 30,
-          "stops": 60,
-          "lengthKm": 32.02,
-          "stats": {
-            "observations": 1527,
-            "matched": 1527,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.47177405581125714,
-            "roundaboutSegs": 72,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "609",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Bielany",
-          "variants": 3,
-          "tripCount": 4,
-          "stops": 21,
-          "lengthKm": 16.86,
-          "stats": {
-            "observations": 846,
-            "matched": 846,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.2857558590532911,
-            "roundaboutSegs": 1,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Dworzec Główny Wschód",
-          "variants": 3,
-          "tripCount": 4,
-          "stops": 21,
-          "lengthKm": 11.91,
-          "stats": {
-            "observations": 599,
-            "matched": 599,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3598370048246231,
-            "roundaboutSegs": 10,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "610",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Prądnik Czerwony P+R",
-          "variants": 4,
-          "tripCount": 4,
-          "stops": 45,
-          "lengthKm": 24.77,
-          "stats": {
-            "observations": 1226,
-            "matched": 1226,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.2901777000729604,
-            "roundaboutSegs": 5,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Sidzina",
-          "variants": 5,
-          "tripCount": 4,
-          "stops": 43,
-          "lengthKm": 24.89,
-          "stats": {
-            "observations": 1231,
-            "matched": 1231,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3005047427631309,
-            "roundaboutSegs": 33,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "611",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Bronowice Wielkie Wschód",
-          "variants": 2,
-          "tripCount": 12,
-          "stops": 32,
-          "lengthKm": 16.97,
-          "stats": {
-            "observations": 850,
-            "matched": 850,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3325153675286161,
-            "roundaboutSegs": 21,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Czyżyny Dworzec",
-          "variants": 3,
-          "tripCount": 12,
-          "stops": 31,
-          "lengthKm": 16.94,
-          "stats": {
-            "observations": 849,
-            "matched": 849,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.404826077658617,
-            "roundaboutSegs": 64,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "662",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Czerwone Maki P+R",
-          "variants": 2,
-          "tripCount": 10,
-          "stops": 29,
-          "lengthKm": 17.2,
-          "stats": {
-            "observations": 834,
-            "matched": 834,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.436783001438412,
-            "roundaboutSegs": 43,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Plac Centralny im. R. Reagana",
-          "variants": 2,
-          "tripCount": 12,
-          "stops": 29,
-          "lengthKm": 17.63,
-          "stats": {
-            "observations": 859,
-            "matched": 859,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.5917041173700511,
-            "roundaboutSegs": 46,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "664",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Bronowice Małe",
-          "variants": 5,
-          "tripCount": 35,
-          "stops": 28,
-          "lengthKm": 15.06,
-          "stats": {
-            "observations": 740,
-            "matched": 740,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.41688973102610966,
-            "roundaboutSegs": 17,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Os. Piastów",
-          "variants": 2,
-          "tripCount": 38,
-          "stops": 30,
-          "lengthKm": 16.44,
-          "stats": {
-            "observations": 804,
-            "matched": 804,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.7204668466576938,
-            "roundaboutSegs": 60,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "669",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Górka Narodowa P+R",
-          "variants": 4,
-          "tripCount": 10,
-          "stops": 33,
-          "lengthKm": 19.58,
-          "stats": {
-            "observations": 963,
-            "matched": 963,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.2858421086756935,
-            "roundaboutSegs": 10,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Nowy Bieżanów P+R",
-          "variants": 2,
-          "tripCount": 10,
-          "stops": 33,
-          "lengthKm": 20.88,
-          "stats": {
-            "observations": 1048,
-            "matched": 1048,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.31003306021802135,
-            "roundaboutSegs": 66,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "902",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Dworzec Główny Wschód",
-          "variants": 4,
-          "tripCount": 21,
-          "stops": 30,
-          "lengthKm": 14.73,
-          "stats": {
-            "observations": 722,
-            "matched": 722,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.46822132609826295,
-            "roundaboutSegs": 40,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Kraków Airport",
-          "variants": 4,
-          "tripCount": 18,
-          "stops": 28,
-          "lengthKm": 15.6,
-          "stats": {
-            "observations": 767,
-            "matched": 767,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.38326991851159553,
-            "roundaboutSegs": 33,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "903",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Czerwone Maki P+R",
-          "variants": 3,
-          "tripCount": 4,
-          "stops": 12,
-          "lengthKm": 8.11,
-          "stats": {
-            "observations": 408,
-            "matched": 408,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.4045287041648979,
-            "roundaboutSegs": 25,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Skawina",
-          "variants": 4,
-          "tripCount": 2,
-          "stops": 14,
-          "lengthKm": 7.83,
-          "stats": {
-            "observations": 393,
-            "matched": 393,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.37553043194940744,
-            "roundaboutSegs": 23,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "904",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Prądnik Biały",
-          "variants": 6,
-          "tripCount": 12,
-          "stops": 46,
-          "lengthKm": 26.56,
-          "stats": {
-            "observations": 1330,
-            "matched": 1330,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.2902521550496266,
-            "roundaboutSegs": 14,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Wieliczka Kampus",
-          "variants": 4,
-          "tripCount": 15,
-          "stops": 44,
-          "lengthKm": 26.53,
-          "stats": {
-            "observations": 1329,
-            "matched": 1329,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.36261726901887326,
-            "roundaboutSegs": 21,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "910",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Będkowice Pętla",
-          "variants": 4,
-          "tripCount": 3,
-          "stops": 35,
-          "lengthKm": 32.26,
-          "stats": {
-            "observations": 1598,
-            "matched": 1598,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.26756882929875764,
-            "roundaboutSegs": 54,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Bronowice Małe",
-          "variants": 4,
-          "tripCount": 3,
-          "stops": 36,
-          "lengthKm": 32.55,
-          "stats": {
-            "observations": 1632,
-            "matched": 1632,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.2784063226943713,
-            "roundaboutSegs": 35,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "915",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Łagiewniki",
-          "variants": 4,
-          "tripCount": 1,
-          "stops": 32,
-          "lengthKm": 18.55,
-          "stats": {
-            "observations": 929,
-            "matched": 929,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.30057356250490386,
-            "roundaboutSegs": 11,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Świątniki Górne Urząd Miasta i Gminy",
-          "variants": 4,
-          "tripCount": 1,
-          "stops": 25,
-          "lengthKm": 13.08,
-          "stats": {
-            "observations": 640,
-            "matched": 640,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.27475946393347006,
-            "roundaboutSegs": 18,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "917",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Górka Narodowa P+R",
-          "variants": 3,
-          "tripCount": 10,
-          "stops": 13,
-          "lengthKm": 8.11,
-          "stats": {
-            "observations": 404,
-            "matched": 404,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.23252494774596322,
-            "roundaboutSegs": 14,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Górna Wieś Pętla",
-          "variants": 2,
-          "tripCount": 10,
-          "stops": 14,
-          "lengthKm": 8.04,
-          "stats": {
-            "observations": 403,
-            "matched": 403,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.2196425622403489,
-            "roundaboutSegs": 12,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "918",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Bronowice Małe",
-          "variants": 3,
-          "tripCount": 4,
-          "stops": 28,
-          "lengthKm": 18.16,
-          "stats": {
-            "observations": 911,
-            "matched": 911,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.33961817760268653,
-            "roundaboutSegs": 7,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Rudawa Rynek",
-          "variants": 2,
-          "tripCount": 4,
-          "stops": 28,
-          "lengthKm": 18.06,
-          "stats": {
-            "observations": 906,
-            "matched": 906,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3690416428992892,
-            "roundaboutSegs": 6,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "937",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Krowodrza Górka P+R",
-          "variants": 4,
-          "tripCount": 6,
-          "stops": 21,
-          "lengthKm": 12.84,
-          "stats": {
-            "observations": 644,
-            "matched": 644,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.29531760286348846,
-            "roundaboutSegs": 34,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Owczary Pętla",
-          "variants": 4,
-          "tripCount": 6,
-          "stops": 21,
-          "lengthKm": 13.07,
-          "stats": {
-            "observations": 656,
-            "matched": 656,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.26576813551040435,
-            "roundaboutSegs": 29,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
-      "line": "948",
-      "mode": "bus",
-      "color": "#000000",
-      "dirs": [
-        {
-          "dir": "0",
-          "headsign": "Bronowice Małe",
-          "variants": 2,
-          "tripCount": 4,
-          "stops": 26,
-          "lengthKm": 18.67,
-          "stats": {
-            "observations": 924,
-            "matched": 924,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3661048277407943,
-            "roundaboutSegs": 8,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        },
-        {
-          "dir": "1",
-          "headsign": "Zelków Pętla",
-          "variants": 4,
-          "tripCount": 2,
-          "stops": 26,
-          "lengthKm": 19.04,
-          "stats": {
-            "observations": 939,
-            "matched": 939,
-            "noCandidates": 0,
-            "viterbiBreaks": 0,
-            "bridged": 0,
-            "rawStretchCount": 0,
-            "rawMeters": 0,
-            "meanError": 0.3923879404904977,
-            "roundaboutSegs": 28,
-            "extStart": 0,
-            "extEnd": 0
-          }
-        }
-      ],
-      "rank": 2
-    },
-    {
       "line": "1",
       "mode": "tram",
       "color": "#d6212b",
@@ -13014,6 +12114,906 @@
         }
       ],
       "rank": 1
+    },
+    {
+      "line": "601",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Mydlniki Wapiennik SKA P+R",
+          "variants": 5,
+          "tripCount": 15,
+          "stops": 63,
+          "lengthKm": 31.71,
+          "stats": {
+            "observations": 1577,
+            "matched": 1577,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3919365394134538,
+            "roundaboutSegs": 64,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Zajezdnia Bieńczyce",
+          "variants": 4,
+          "tripCount": 15,
+          "stops": 59,
+          "lengthKm": 30.47,
+          "stats": {
+            "observations": 1523,
+            "matched": 1523,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.44867268310261693,
+            "roundaboutSegs": 29,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "605",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Teatr Słowackiego",
+          "variants": 2,
+          "tripCount": 25,
+          "stops": 23,
+          "lengthKm": 13.07,
+          "stats": {
+            "observations": 639,
+            "matched": 639,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.34004791713532223,
+            "roundaboutSegs": 13,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Złocień",
+          "variants": 3,
+          "tripCount": 25,
+          "stops": 23,
+          "lengthKm": 13.07,
+          "stats": {
+            "observations": 654,
+            "matched": 654,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3324803472670759,
+            "roundaboutSegs": 4,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "608",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Kliny",
+          "variants": 2,
+          "tripCount": 25,
+          "stops": 59,
+          "lengthKm": 31.85,
+          "stats": {
+            "observations": 1592,
+            "matched": 1592,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.37368696287905184,
+            "roundaboutSegs": 31,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Os. Na Stoku",
+          "variants": 2,
+          "tripCount": 30,
+          "stops": 60,
+          "lengthKm": 32.02,
+          "stats": {
+            "observations": 1527,
+            "matched": 1527,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.47177405581125714,
+            "roundaboutSegs": 72,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "609",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Bielany",
+          "variants": 3,
+          "tripCount": 4,
+          "stops": 21,
+          "lengthKm": 16.86,
+          "stats": {
+            "observations": 846,
+            "matched": 846,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.2857558590532911,
+            "roundaboutSegs": 1,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Dworzec Główny Wschód",
+          "variants": 3,
+          "tripCount": 4,
+          "stops": 21,
+          "lengthKm": 11.91,
+          "stats": {
+            "observations": 599,
+            "matched": 599,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3598370048246231,
+            "roundaboutSegs": 10,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "610",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Prądnik Czerwony P+R",
+          "variants": 4,
+          "tripCount": 4,
+          "stops": 45,
+          "lengthKm": 24.77,
+          "stats": {
+            "observations": 1226,
+            "matched": 1226,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.2901777000729604,
+            "roundaboutSegs": 5,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Sidzina",
+          "variants": 5,
+          "tripCount": 4,
+          "stops": 43,
+          "lengthKm": 24.89,
+          "stats": {
+            "observations": 1231,
+            "matched": 1231,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3005047427631309,
+            "roundaboutSegs": 33,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "611",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Bronowice Wielkie Wschód",
+          "variants": 2,
+          "tripCount": 12,
+          "stops": 32,
+          "lengthKm": 16.97,
+          "stats": {
+            "observations": 850,
+            "matched": 850,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3325153675286161,
+            "roundaboutSegs": 21,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Czyżyny Dworzec",
+          "variants": 3,
+          "tripCount": 12,
+          "stops": 31,
+          "lengthKm": 16.94,
+          "stats": {
+            "observations": 849,
+            "matched": 849,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.404826077658617,
+            "roundaboutSegs": 64,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "662",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Czerwone Maki P+R",
+          "variants": 2,
+          "tripCount": 10,
+          "stops": 29,
+          "lengthKm": 17.2,
+          "stats": {
+            "observations": 834,
+            "matched": 834,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.436783001438412,
+            "roundaboutSegs": 43,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Plac Centralny im. R. Reagana",
+          "variants": 2,
+          "tripCount": 12,
+          "stops": 29,
+          "lengthKm": 17.63,
+          "stats": {
+            "observations": 859,
+            "matched": 859,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.5917041173700511,
+            "roundaboutSegs": 46,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "664",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Bronowice Małe",
+          "variants": 5,
+          "tripCount": 35,
+          "stops": 28,
+          "lengthKm": 15.06,
+          "stats": {
+            "observations": 740,
+            "matched": 740,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.41688973102610966,
+            "roundaboutSegs": 17,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Os. Piastów",
+          "variants": 2,
+          "tripCount": 38,
+          "stops": 30,
+          "lengthKm": 16.44,
+          "stats": {
+            "observations": 804,
+            "matched": 804,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.7204668466576938,
+            "roundaboutSegs": 60,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "669",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Górka Narodowa P+R",
+          "variants": 4,
+          "tripCount": 10,
+          "stops": 33,
+          "lengthKm": 19.58,
+          "stats": {
+            "observations": 963,
+            "matched": 963,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.2858421086756935,
+            "roundaboutSegs": 10,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Nowy Bieżanów P+R",
+          "variants": 2,
+          "tripCount": 10,
+          "stops": 33,
+          "lengthKm": 20.88,
+          "stats": {
+            "observations": 1048,
+            "matched": 1048,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.31003306021802135,
+            "roundaboutSegs": 66,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "902",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Dworzec Główny Wschód",
+          "variants": 4,
+          "tripCount": 21,
+          "stops": 30,
+          "lengthKm": 14.73,
+          "stats": {
+            "observations": 722,
+            "matched": 722,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.46822132609826295,
+            "roundaboutSegs": 40,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Kraków Airport",
+          "variants": 4,
+          "tripCount": 18,
+          "stops": 28,
+          "lengthKm": 15.6,
+          "stats": {
+            "observations": 767,
+            "matched": 767,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.38326991851159553,
+            "roundaboutSegs": 33,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "903",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Czerwone Maki P+R",
+          "variants": 3,
+          "tripCount": 4,
+          "stops": 12,
+          "lengthKm": 8.11,
+          "stats": {
+            "observations": 408,
+            "matched": 408,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.4045287041648979,
+            "roundaboutSegs": 25,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Skawina",
+          "variants": 4,
+          "tripCount": 2,
+          "stops": 14,
+          "lengthKm": 7.83,
+          "stats": {
+            "observations": 393,
+            "matched": 393,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.37553043194940744,
+            "roundaboutSegs": 23,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "904",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Prądnik Biały",
+          "variants": 6,
+          "tripCount": 12,
+          "stops": 46,
+          "lengthKm": 26.56,
+          "stats": {
+            "observations": 1330,
+            "matched": 1330,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.2902521550496266,
+            "roundaboutSegs": 14,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Wieliczka Kampus",
+          "variants": 4,
+          "tripCount": 15,
+          "stops": 44,
+          "lengthKm": 26.53,
+          "stats": {
+            "observations": 1329,
+            "matched": 1329,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.36261726901887326,
+            "roundaboutSegs": 21,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "910",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Będkowice Pętla",
+          "variants": 4,
+          "tripCount": 3,
+          "stops": 35,
+          "lengthKm": 32.26,
+          "stats": {
+            "observations": 1598,
+            "matched": 1598,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.26756882929875764,
+            "roundaboutSegs": 54,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Bronowice Małe",
+          "variants": 4,
+          "tripCount": 3,
+          "stops": 36,
+          "lengthKm": 32.55,
+          "stats": {
+            "observations": 1632,
+            "matched": 1632,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.2784063226943713,
+            "roundaboutSegs": 35,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "915",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Łagiewniki",
+          "variants": 4,
+          "tripCount": 1,
+          "stops": 32,
+          "lengthKm": 18.55,
+          "stats": {
+            "observations": 929,
+            "matched": 929,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.30057356250490386,
+            "roundaboutSegs": 11,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Świątniki Górne Urząd Miasta i Gminy",
+          "variants": 4,
+          "tripCount": 1,
+          "stops": 25,
+          "lengthKm": 13.08,
+          "stats": {
+            "observations": 640,
+            "matched": 640,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.27475946393347006,
+            "roundaboutSegs": 18,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "917",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Górka Narodowa P+R",
+          "variants": 3,
+          "tripCount": 10,
+          "stops": 13,
+          "lengthKm": 8.11,
+          "stats": {
+            "observations": 404,
+            "matched": 404,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.23252494774596322,
+            "roundaboutSegs": 14,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Górna Wieś Pętla",
+          "variants": 2,
+          "tripCount": 10,
+          "stops": 14,
+          "lengthKm": 8.04,
+          "stats": {
+            "observations": 403,
+            "matched": 403,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.2196425622403489,
+            "roundaboutSegs": 12,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "918",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Bronowice Małe",
+          "variants": 3,
+          "tripCount": 4,
+          "stops": 28,
+          "lengthKm": 18.16,
+          "stats": {
+            "observations": 911,
+            "matched": 911,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.33961817760268653,
+            "roundaboutSegs": 7,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Rudawa Rynek",
+          "variants": 2,
+          "tripCount": 4,
+          "stops": 28,
+          "lengthKm": 18.06,
+          "stats": {
+            "observations": 906,
+            "matched": 906,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3690416428992892,
+            "roundaboutSegs": 6,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "937",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Krowodrza Górka P+R",
+          "variants": 4,
+          "tripCount": 6,
+          "stops": 21,
+          "lengthKm": 12.84,
+          "stats": {
+            "observations": 644,
+            "matched": 644,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.29531760286348846,
+            "roundaboutSegs": 34,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Owczary Pętla",
+          "variants": 4,
+          "tripCount": 6,
+          "stops": 21,
+          "lengthKm": 13.07,
+          "stats": {
+            "observations": 656,
+            "matched": 656,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.26576813551040435,
+            "roundaboutSegs": 29,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "line": "948",
+      "mode": "bus",
+      "color": "#000000",
+      "dirs": [
+        {
+          "dir": "0",
+          "headsign": "Bronowice Małe",
+          "variants": 2,
+          "tripCount": 4,
+          "stops": 26,
+          "lengthKm": 18.67,
+          "stats": {
+            "observations": 924,
+            "matched": 924,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3661048277407943,
+            "roundaboutSegs": 8,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        },
+        {
+          "dir": "1",
+          "headsign": "Zelków Pętla",
+          "variants": 4,
+          "tripCount": 2,
+          "stops": 26,
+          "lengthKm": 19.04,
+          "stats": {
+            "observations": 939,
+            "matched": 939,
+            "noCandidates": 0,
+            "viterbiBreaks": 0,
+            "bridged": 0,
+            "rawStretchCount": 0,
+            "rawMeters": 0,
+            "meanError": 0.3923879404904977,
+            "roundaboutSegs": 28,
+            "extStart": 0,
+            "extEnd": 0
+          }
+        }
+      ],
+      "rank": 2
     },
     {
       "line": "62",

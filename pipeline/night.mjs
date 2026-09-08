@@ -121,7 +121,11 @@ export function nightPass(dir, NIGHT, opts = {}) {
       if (sort) {
         const firstMode = new Map();
         meta.lines.forEach((l, i) => { if (!firstMode.has(l.mode)) firstMode.set(l.mode, i); });
-        meta.lines = meta.lines.map((l, i) => ({ l, i })).sort((a, b) => ((isNight(key(a.l)) ? 1 : 0) - (isNight(key(b.l)) ? 1 : 0)) || (firstMode.get(a.l.mode) - firstMode.get(b.l.mode)) || (a.i - b.i)).map((x) => x.l);
+        // colours together: mode groups in their first-seen order, the green
+        // trolleybuses at the head of their group, the black night lines last of all
+        const grp = (l) => (isNight(key(l)) ? 1 : 0);
+        const tro = (l) => (String(l.color).toLowerCase() === TROLLEY_GREEN ? 0 : 1);
+        meta.lines = meta.lines.map((l, i) => ({ l, i })).sort((a, b) => (grp(a.l) - grp(b.l)) || (firstMode.get(a.l.mode) - firstMode.get(b.l.mode)) || (tro(a.l) - tro(b.l)) || (a.i - b.i)).map((x) => x.l);
       }
     }
     writeFileSync(metaFile, JSON.stringify(meta, null, 2), 'utf8');
