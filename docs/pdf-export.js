@@ -13,12 +13,17 @@
 // own Roboto Condensed, embedded from web/vendor. pdf-lib and fontkit load
 // on the first PDF, not with the page.
 (() => {
+  const VERSION = '20260908i'; // stamped into the PDF's Producer, so a sheet says which script made it
   const PAD = 200;           // CSS px of tile overlap for label context
   const TILE = 2048;         // CSS px of the inner tile
   const MAX_PX = 65536;      // long edge of a poster sheet in CSS px — the PNG posters' ceiling
   const MAX_PT = 14000;      // long edge of the PDF page in points (Acrobat's 200-inch limit)
   const STOP_R = 13;         // stop marker radius, CSS px at icon-size 1 (the screen's disc is 7.5 — the poster wants them seen)
   const STOP_RIM = 3.5;      // its rim
+  const DOT_R = 9.5;         // the full discs (termini, metro stations): a smaller boost, they sit inside badge grids and under names
+  const NUMBER_BOOST = 1;    // the route-number labels, on top of the poster boost (1 = as placed; the panel's A+ buttons scale the export too)
+  const STREET_NAME_SCALE = 0.9;                       // street names a touch smaller than the stop names (user rule)
+  const STREET_NAME_INK = { r: 0.42, g: 0.42, b: 0.42 }; // and grey, so they read apart from the stop names
   const MAP = () => window.__map || (typeof map !== 'undefined' && map && map.getZoom ? map : null);
 
   const VARIANTS = [
@@ -188,7 +193,7 @@
   };
 
   // ---------- a small evaluator for the style expressions this family uses ----------
-  const OPS = new Set(['literal', 'zoom', 'get', 'has', 'geometry-type', 'coalesce', 'case', 'match', 'interpolate', 'step', 'all', 'any', '!', '==', '!=', '<', '<=', '>', '>=', 'in', 'length', '*', '+', '-', '/', 'concat', 'to-string', 'to-number', 'upcase', 'downcase', 'string', 'number', 'boolean', 'format', 'let', 'var']);
+  const OPS = new Set(['max', 'min', 'round', 'floor', 'ceil', 'abs', 'sqrt', '%', '^', 'ln', 'log2', 'log10', 'e', 'pi', 'literal', 'zoom', 'get', 'has', 'geometry-type', 'coalesce', 'case', 'match', 'interpolate', 'step', 'all', 'any', '!', '==', '!=', '<', '<=', '>', '>=', 'in', 'length', '*', '+', '-', '/', 'concat', 'to-string', 'to-number', 'upcase', 'downcase', 'string', 'number', 'boolean', 'format', 'let', 'var']);
   const lerp = (a, b, t) => (typeof a === 'number' && typeof b === 'number' ? a + (b - a) * t : (t < 0.5 ? a : b));
   function ev(x, z, p) {
     if (!Array.isArray(x)) return x;
@@ -242,10 +247,41 @@
       case 'downcase': return String(ev(x[1], z, p) ?? '').toLowerCase();
       case 'string': case 'number': case 'boolean': return ev(x[1], z, p);
       case 'format': return x.slice(1).filter((_, i) => i % 2 === 0).map((e) => ev(e, z, p) ?? '').join('');
+      case 'max': return Math.max(...x.slice(1).map((e) => ev(e, z, p)));
+      case 'min': return Math.min(...x.slice(1).map((e) => ev(e, z, p)));
+      case 'round': return Math.round(ev(x[1], z, p));
+      case 'floor': return Math.floor(ev(x[1], z, p));
+      case 'ceil': return Math.ceil(ev(x[1], z, p));
+      case 'abs': return Math.abs(ev(x[1], z, p));
+      case 'sqrt': return Math.sqrt(ev(x[1], z, p));
+      case '%': return ev(x[1], z, p) % ev(x[2], z, p);
+      case '^': return Math.pow(ev(x[1], z, p), ev(x[2], z, p));
+      case 'ln': return Math.log(ev(x[1], z, p));
+      case 'log2': return Math.log2(ev(x[1], z, p));
+      case 'log10': return Math.log10(ev(x[1], z, p));
+      case 'e': return Math.E;
+      case 'pi': return Math.PI;
       case 'let': return ev(x[x.length - 1], z, p);
       case 'var': return undefined;
       default: return undefined;
     }
+  }
+  // A text-field as MapLibre's sections: `format` gives runs with their own
+  // colour; anything else is one run in the layer's colour.
+  function sectionsOf(x, z, p) {
+    if (Array.isArray(x) && OPS.has(x[0])) {
+      const op = x[0];
+      if (op === 'format') {
+        const out = [];
+        for (let i = 1; i < x.length; i += 2) { const t = ev(x[i], z, p); const o = x[i + 1] && !Array.isArray(x[i + 1]) && typeof x[i + 1] === 'object' ? x[i + 1] : {}; if (t !== undefined && t !== null && t !== '') out.push({ text: String(t), color: o['text-color'] !== undefined ? ev(o['text-color'], z, p) : null }); }
+        return out;
+      }
+      if (op === 'case') { for (let i = 1; i + 1 < x.length; i += 2) { if (ev(x[i], z, p)) return sectionsOf(x[i + 1], z, p); } return sectionsOf(x[x.length - 1], z, p); }
+      if (op === 'coalesce') { for (let i = 1; i < x.length; i++) { const s = sectionsOf(x[i], z, p); if (s.length && s.some((q) => q.text !== '')) return s; } return []; }
+      if (op === 'match') { const v = ev(x[1], z, p); for (let i = 2; i + 1 < x.length; i += 2) { const lab = x[i]; if ((Array.isArray(lab) ? lab : [lab]).includes(v)) return sectionsOf(x[i + 1], z, p); } return sectionsOf(x[x.length - 1], z, p); }
+    }
+    const v = ev(x, z, p);
+    return v === undefined || v === null || v === '' ? [] : [{ text: String(v), color: null }];
   }
   const num = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
   const mxOf = (lng) => (lng + 180) / 360;
@@ -326,7 +362,7 @@
       .map(async (u) => doc.embedFont(await (await fetch(u)).arrayBuffer(), { subset: true })));
     const charset = { reg: new Set(fReg.getCharacterSet()), bold: new Set(fBold.getCharacterSet()) };
     doc.setTitle(document.title);
-    doc.setProducer('transit-maps pdf-export');
+    doc.setProducer('transit-maps pdf-export ' + VERSION);
     doc.setCreator('miqell24.github.io/transit-maps');
     const ctx = doc.context;
 
@@ -399,14 +435,10 @@
     };
     const withAlpha = (a, fn) => { const k = alphaKey(a); if (!k) return fn(); C.op('q ' + k + ' gs'); fn(); C.op('Q'); };
     const state = {
-      C, S, W, H, PW, PH, fReg, fBold, enter, leave, groupOf, withAlpha, alphaKey, nameSpots: new Map(),
-      placed: (() => { const G = 48; const cells = new Map(); return {
-        hit(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const c = cells.get(i + ',' + j); if (c && c.some((q) => q[0] < b[2] && q[2] > b[0] && q[1] < b[3] && q[3] > b[1])) return true; } return false; },
-        add(b) { for (let i = Math.floor(b[0] / G); i <= Math.floor(b[2] / G); i++) for (let j = Math.floor(b[1] / G); j <= Math.floor(b[3] / G); j++) { const k = i + ',' + j; let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(b); } },
-      }; })(),
+      C, S, W, H, PW, PH, fReg, fBold, enter, leave, groupOf, withAlpha, alphaKey, symBuf: new Map(),
       seen: new Set(),
       counts: { layers: 0, fills: 0, lines: 0, texts: 0, icons: 0 },
-      clean: (t, bold) => [...String(t)].filter((ch) => (bold ? charset.bold : charset.reg).has(ch.codePointAt(0)) || ch === ' ').join(''),
+      clean: (t, bold) => [...String(t)].filter((ch) => (bold ? charset.bold : charset.reg).has(ch.codePointAt(0)) || ch === ' ' || ch === '\n').join(''),
       T: { idle: 0, draw: 0, query: 0 },
     };
 
@@ -424,6 +456,13 @@
       const px2ll = (x, y) => { const n = Math.PI - (2 * Math.PI * y) / world; return [(x / world) * 360 - 180, (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))]; };
       let m2 = null;
       try {
+        // MapLibre parses tiles in one worker by default, and every viewport
+        // of the sheet loads ~100 GeoJSON tiles: the export map gets its own
+        // pool of four (the live map keeps the workers it has)
+        try {
+          const pool = m0.style && m0.style.dispatcher && m0.style.dispatcher.workerPool;
+          if (pool && typeof maplibregl.setWorkerCount === 'function' && maplibregl.getWorkerCount() < 4) { maplibregl.setWorkerCount(4); pool.workers = null; }
+        } catch (e) { /* the default pool then */ }
         m2 = new maplibregl.Map({ container: div, style: boostStyle(m0.getStyle(), POSTER_BOOST), center: px2ll(tlx + W / 2, tly + H / 2), zoom: Z, attributionControl: false, interactive: false, fadeDuration: 0 });
         const idle = () => new Promise((res, rej) => { const t = setTimeout(() => rej(new Error('tile render timeout')), 90000); m2.once('idle', () => { clearTimeout(t); res(); }); });
         await idle();
@@ -443,10 +482,16 @@
             const t0 = performance.now();
             await idle();
             T.idle += performance.now() - t0;
+            if (window.__pdfDebug && window.__pdfDebug.snap === k) {
+              // test hook: this tile as MapLibre drew it, for a side-by-side with the sheet
+              await new Promise((res) => { m2.once('render', () => { try { window.__pdfDebug.png = m2.getCanvas().toDataURL('image/png'); } catch (e) { window.__pdfDebug.png = String(e); } res(); }); m2.triggerRepaint(); });
+              window.__pdfDebug.rect = [x0, y0, w, h];
+            }
             // page rect of this tile (PDF y up)
             const rect = [x0 * S, (H - y0 - h) * S, (x0 + w) * S, (H - y0) * S];
             C.op('q ' + f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) + ' re W n');
             const t1 = performance.now();
+            state.tileK = k;
             drawScene(m2, px, rect, state);
             T.draw += performance.now() - t1;
             leave(); C.op('Q');
@@ -458,6 +503,30 @@
         div.remove();
       }
     }
+    // the symbols of the whole sheet, layer by layer in style order, above every tile
+    setLbl('Labels…');
+    // Cross-tile placement. Every tile is its own MapLibre viewport with its
+    // own collision run, so two labels from neighbouring tiles can land on
+    // one spot near the seam (the PNG posters hide this by cutting pixels at
+    // the seam). The layers are walked the way MapLibre places them, top of
+    // the style first, and a label whose box meets one already kept from
+    // ANOTHER tile is dropped; labels of one tile never collide with each
+    // other (MapLibre placed them together). Allow-overlap layers keep
+    // everything but still claim their boxes, like on screen.
+    const order = m0.getStyle().layers.map((l) => l.id).filter((id) => state.symBuf.has(id));
+    const cell = 400; const grid = new Map();
+    const cellsOf = (bx) => { const r = []; for (let i = Math.floor(bx[0] / cell); i <= Math.floor(bx[2] / cell); i++) for (let j = Math.floor(bx[1] / cell); j <= Math.floor(bx[3] / cell); j++) r.push(i + ':' + j); return r; };
+    const hits = (bx, tile) => { for (const key of cellsOf(bx)) { const a = grid.get(key); if (!a) continue; for (const q of a) if (q.tile !== tile && q.b[0] < bx[2] && q.b[2] > bx[0] && q.b[1] < bx[3] && q.b[3] > bx[1]) return true; } return false; };
+    const insert = (bx, tile) => { for (const key of cellsOf(bx)) { let a = grid.get(key); if (!a) grid.set(key, a = []); a.push({ b: bx, tile }); } };
+    state.counts.dropped = 0;
+    for (const id of [...order].reverse()) {
+      for (const r of state.symBuf.get(id).recs) {
+        if (!r.box) { r.keep = true; continue; }
+        if (r.allow || !hits(r.box, r.tile)) { r.keep = true; if (!r.ignore) insert(r.box, r.tile); } else { r.keep = false; state.counts.dropped++; }
+      }
+    }
+    for (const id of order) { const buf = state.symBuf.get(id); enter(buf.group); for (const r of buf.recs) if (r.keep) for (const o of r.ops) C.op(o); leave(); await C.flush(); }
+    state.symBuf.clear();
     // attribution, bottom right, as text
     const attr = (document.querySelector('.maplibregl-ctrl-attrib-inner') || {}).textContent || '© OpenStreetMap contributors · OpenFreeMap';
     enter('Attribution');
@@ -486,7 +555,7 @@
   // their anchor is inside it, so the overlap between tiles is context, not
   // duplication.
   function drawScene(m, px, rect, st) {
-    const { C, S, PH, fReg, fBold, clean, placed, seen, counts, enter, leave, groupOf, withAlpha, alphaKey, nameSpots } = st;
+    const { C, S, PH, fReg, fBold, clean, seen, counts, enter, leave, groupOf, withAlpha, alphaKey } = st;
     const z = m.getZoom();
     const col = (c, alphaMul) => { const k = parseColor(c); return k ? { r: k.r, g: k.g, b: k.b, a: Math.max(0, Math.min(1, k.a * (alphaMul ?? 1))) } : null; };
     const asRings = (g) => (g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []);
@@ -508,12 +577,30 @@
     const inRect = (x, y) => !rect || (x >= rect[0] && x < rect[2] && y >= rect[1] && y < rect[3]);
     const cw = m.getContainer().clientWidth, ch = m.getContainer().clientHeight;
     const rectOnScreen = rect ? [PAD, PAD, cw - PAD, ch - PAD] : null;
-    const wrap = (t, font, size, maxW) => {
-      if (!t.includes(' ') || font.widthOfTextAtSize(t, size) <= maxW) return t.split('\n');
-      const out = []; let cur = '';
-      for (const w of t.split(/\s+/)) { const cand = cur ? cur + ' ' + w : w; if (font.widthOfTextAtSize(cand, size) > maxW && cur) { out.push(cur); cur = w; } else cur = cand; }
-      if (cur) out.push(cur);
-      return out;
+    // MapLibre's line breaking (shaping.ts): break candidates after spaces
+    // (and forced at newlines), the target line width = total / ceil(total /
+    // max width), the least-bad set of breaks by squared raggedness — so the
+    // rows come out the shape the collision boxes were placed with
+    const breakLines = (chars, adv, maxW) => {
+      const n = chars.length;
+      const total = adv.reduce((a, b) => a + b, 0);
+      const hasNl = chars.some((q) => q.ch === '\n');
+      const rowsOf = (breaks) => { const rows = []; let start = 0; for (const b of [...breaks, n]) { const row = []; for (let i = start; i < b; i++) if (chars[i].ch !== '\n' && !(i === b - 1 && chars[i].ch === ' ')) row.push(i); rows.push(row); start = b; } return rows; };
+      if (!maxW || (total <= maxW && !hasNl)) return [chars.map((_, i) => i)];
+      const target = total / Math.max(1, Math.ceil(total / maxW));
+      const cand = []; let x = 0;
+      for (let i = 0; i < n; i++) { x += adv[i]; if (chars[i].ch === ' ' || chars[i].ch === '\n') cand.push({ index: i + 1, x, penalty: chars[i].ch === '\n' ? -10000 : 0 }); }
+      const bad = (lw, penalty, last) => { const r = (lw - target) * (lw - target); return last && lw < target ? r / 2 : r + penalty * Math.abs(penalty); }; // a newline's negative penalty forces the break
+      const memo = new Map();
+      const evalBreak = (idx, bx, penalty, last) => {
+        const key = idx + '|' + last; if (memo.has(key)) return memo.get(key);
+        let best = { badness: bad(bx, penalty, last), prior: null, index: idx };
+        for (const c of cand) { if (c.index >= idx) break; const prior = evalBreak(c.index, c.x, c.penalty, false); const b = bad(bx - c.x, penalty, last) + prior.badness; if (b <= best.badness) best = { badness: b, prior, index: idx }; }
+        memo.set(key, best); return best;
+      };
+      const breaks = []; let node = evalBreak(n, total, 0, true);
+      while (node && node.prior) { breaks.unshift(node.prior.index); node = node.prior; }
+      return rowsOf(breaks);
     };
     const circle = (x, y, r) => {
       const k = KAPPA * r;
@@ -522,6 +609,18 @@
         f2(x - k) + ' ' + f2(y + r) + ' ' + f2(x - r) + ' ' + f2(y + k) + ' ' + f2(x - r) + ' ' + f2(y) + ' c ' +
         f2(x - r) + ' ' + f2(y - k) + ' ' + f2(x - k) + ' ' + f2(y - r) + ' ' + f2(x) + ' ' + f2(y - r) + ' c ' +
         f2(x + k) + ' ' + f2(y - r) + ' ' + f2(x + r) + ' ' + f2(y - k) + ' ' + f2(x + r) + ' ' + f2(y) + ' c h';
+    };
+    // a rounded rectangle path (corner radius r)
+    const rrect = (x, y, w, h, r) => {
+      const k = KAPPA * r;
+      return f2(x + r) + ' ' + f2(y) + ' m ' + f2(x + w - r) + ' ' + f2(y) + ' l ' +
+        f2(x + w - r + k) + ' ' + f2(y) + ' ' + f2(x + w) + ' ' + f2(y + r - k) + ' ' + f2(x + w) + ' ' + f2(y + r) + ' c ' +
+        f2(x + w) + ' ' + f2(y + h - r) + ' l ' +
+        f2(x + w) + ' ' + f2(y + h - r + k) + ' ' + f2(x + w - r + k) + ' ' + f2(y + h) + ' ' + f2(x + w - r) + ' ' + f2(y + h) + ' c ' +
+        f2(x + r) + ' ' + f2(y + h) + ' l ' +
+        f2(x + r - k) + ' ' + f2(y + h) + ' ' + f2(x) + ' ' + f2(y + h - r + k) + ' ' + f2(x) + ' ' + f2(y + h - r) + ' c ' +
+        f2(x) + ' ' + f2(y + r) + ' l ' +
+        f2(x) + ' ' + f2(y + r - k) + ' ' + f2(x + r - k) + ' ' + f2(y) + ' ' + f2(x + r) + ' ' + f2(y) + ' c h';
     };
     const textOp = (font, key, str, size, x, y, ang, colorOp) => {
       const th = (-ang) * Math.PI / 180, a = Math.cos(th), b = Math.sin(th);
@@ -543,17 +642,22 @@
       for (const k in p) { const v = p[k]; if (typeof v === 'string' && (v[0] === '[' || v[0] === '{')) { try { p[k] = JSON.parse(v); } catch (e) { /* a real string */ } } } // queryRenderedFeatures stringifies nested values
       return p;
     };
-    const clipOp = 'q ' + (rect ? f1(rect[0]) + ' ' + f1(rect[1]) + ' ' + f1(rect[2] - rect[0]) + ' ' + f1(rect[3] - rect[1]) : '0 0 ' + f1(st.PW) + ' ' + f1(PH)) + ' re W n';
 
-    // ---- pass 1: the symbols, placed the way MapLibre places them — the
-    // top-most layer first, so it wins the collisions; the stop discs and
-    // badge boxes go before every label so no name lands on a marker ----
+    // ---- pass 1: the symbols — exactly the ones MapLibre placed, where it
+    // placed them. Read from the renderer's own state (symbol instances,
+    // placement, the label's line vertices), so the sheet carries the same
+    // labels as the screen and the PNG posters: every placed street name
+    // runs along its street glyph by glyph, every stop name sits at the
+    // anchor MapLibre chose. ----
     const symOps = new Map();
-    const hasText = (L) => { const tf = m.getLayoutProperty(L.id, 'text-field'); return tf !== undefined && tf !== null && tf !== ''; };
-    const symLayers = layers.filter((L) => L.type === 'symbol' && byLayer.has(L.id));
-    for (const L of [...symLayers.filter((L) => !hasText(L)), ...symLayers.filter(hasText).reverse()]) {
+    for (const L of layers) {
+      if (L.type !== 'symbol') continue;
       const out = [];
-      try { drawSymbols(L, byLayer.get(L.id), out); } catch (e) { console.warn('pdf-export symbols', L.id, e); }
+      try {
+        const items = placedSymbolsOf(L);
+        if (items) drawSymbols(L, items, out);
+        else { const feats = byLayer.get(L.id); if (feats) drawSymbols(L, feats.map(fallbackItem), out); }
+      } catch (e) { console.warn('pdf-export symbols', L.id, e); }
       symOps.set(L.id, out);
     }
 
@@ -568,14 +672,14 @@
       }
       if (L.type === 'symbol') {
         const ops = symOps.get(L.id);
-        if (!ops || !ops.length) continue;
+        if (!ops || !ops.some((r) => r.ops.length)) continue;
         counts.layers++;
-        // a label whose anchor sits inside the tile reaches past its edge:
-        // symbols are drawn outside the tile clip
-        leave(); C.op('Q');
-        enter(group);
-        for (const o of ops) C.op(o);
-        leave(); C.op(clipOp);
+        // symbols are kept for the end of the sheet: a label reaching past
+        // its tile's edge would otherwise be painted over by the next tile's
+        // ground (and they must not be clipped to the tile)
+        let buf = st.symBuf.get(L.id);
+        if (!buf) st.symBuf.set(L.id, buf = { group, recs: [] });
+        for (const r of ops) if (r.ops.length) buf.recs.push(r);
         continue;
       }
       if (!['fill', 'line', 'circle'].includes(L.type)) continue;
@@ -620,165 +724,409 @@
       }
     }
 
-    // The symbols of one layer: icons (stop discs, badge boxes) and labels.
-    // Point labels sit at their anchor (variable anchors: the first free one
-    // of the list, replayed against every box placed so far). Line labels —
-    // street names, the number rows — are placed along the WHOLE geometry
-    // at the layer's symbol-spacing, only where the line runs straight for
-    // the label's length, never twice within a spacing of the same name, and
-    // never over another label: the position MapLibre chose is not exposed,
-    // and its per-vector-tile pieces would otherwise put the same name at
-    // random spots, twice.
-    function drawSymbols(L, feats, out) {
+    // The placed symbols of one layer, read from MapLibre's renderer state.
+    // The renderer keeps, per tile bucket, every glyph quad it drew: four
+    // vertices carrying the quad's offsets from the label's point (24-px em
+    // units, rotation and offsets baked in), the point itself in the
+    // dynamic array — screen pixels for line labels and variable anchors,
+    // pixels from the tile's origin for map-pitched text, tile units for
+    // fixed anchors — the glyph's rotation, its paint colour (the `format`
+    // sections' own colours included), and an opacity that is zero for
+    // everything collision placement dropped. So the sheet gets each glyph
+    // exactly where the screen and the PNG posters have it: wrapping,
+    // justification, the variable anchor chosen, offsets, rotation and the
+    // curve along a street included. Returns null when the internals are
+    // not there (another MapLibre build) — the caller then falls back to
+    // the rendered-feature query and its own layout.
+    function placedSymbolsOf(L) {
+      const style = m.style;
+      const cache = style && style.sourceCaches && style.sourceCaches[L.source];
+      const placement = style && style.placement;
+      if (!cache || !placement || !placement.placements || typeof cache.getRenderableIds !== 'function') return null;
+      const layout = (k) => m.getLayoutProperty(L.id, k);
+      const isLine = (layout('symbol-placement') || 'point') !== 'point';
+      const va = layout('text-variable-anchor');
+      const variable = Array.isArray(va) && va.length > 0;
+      let ra = layout('text-rotation-alignment') || 'auto'; if (ra === 'auto') ra = isLine ? 'map' : 'viewport';
+      let pa = layout('text-pitch-alignment') || 'auto'; if (pa === 'auto') pa = ra;
+      const mode = pa === 'map' ? 'tilepx' : (isLine || variable) ? 'css' : 'tile';
+      // container px → page: linear at pitch 0
+      const q0 = m.unproject([0, 0]), q1 = m.unproject([1, 1]);
+      const P0 = px(q0.lng, q0.lat), P1 = px(q1.lng, q1.lat);
+      const kx = P1[0] - P0[0], ky = P1[1] - P0[1];
+      const cssToPage = (x, y) => [P0[0] + x * kx, P0[1] + y * ky];
+      const items = [];
+      const EXT = 8192;
+      for (const id of cache.getRenderableIds(true)) {
+        const tile = cache.getTileByID(id);
+        if (!tile || !tile.buckets) continue;
+        const b = tile.buckets[L.id];
+        if (!b || !b.symbolInstances || !b.text || !b.text.placedSymbolArray) continue;
+        const fi = tile.latestFeatureIndex;
+        if (!fi || typeof fi.loadVTLayers !== 'function') return null;
+        const vt = fi.loadVTLayers();
+        const name = fi.sourceLayerCoder.decode(b.sourceLayerIndex);
+        const vl = vt[name];
+        if (!vl) continue;
+        const c = tile.tileID.canonical; const n = 2 ** c.z;
+        const ll = (x, y) => { const X = (c.x + x / EXT) / n, Y = (c.y + y / EXT) / n; return [X * 360 - 180, (180 / Math.PI) * Math.atan(Math.sinh(Math.PI * (1 - 2 * Y)))]; };
+        const o = m.project(ll(0, 0)); // the tile's origin on the container
+        const lv = b.text.layoutVertexArray && b.text.layoutVertexArray.int16;
+        const dv = b.text.dynamicLayoutVertexArray && b.text.dynamicLayoutVertexArray.float32;
+        const ov = b.text.opacityVertexArray && b.text.opacityVertexArray.uint8;
+        const sd = b.textSizeData || {};
+        let bucketSize = null;
+        if (sd.kind === 'constant') bucketSize = sd.layoutSize;
+        else if (sd.kind === 'camera') { const t = sd.maxZoom > sd.minZoom ? Math.max(0, Math.min(1, (z - sd.minZoom) / (sd.maxZoom - sd.minZoom))) : 0; bucketSize = sd.minSize + (sd.maxSize - sd.minSize) * t; }
+        let binders = null;
+        try { const pc = b.text.programConfigurations; const cfg = pc && pc.programConfigurations && pc.programConfigurations[L.id]; binders = cfg && cfg.binders; } catch (e) { binders = null; }
+        // a data-driven paint value at a vertex (null when the property is a uniform)
+        const colorAt = (key, v) => { const bd = binders && binders[key]; const arr = bd && bd.paintVertexArray && bd.paintVertexArray.uint16; if (!arr) return null; const per = bd.paintVertexArray.bytesPerElement / 2; const a = arr[v * per], bb = arr[v * per + 1]; return { r: Math.floor(a / 256) / 255, g: (a % 256) / 255, b: Math.floor(bb / 256) / 255, a: (bb % 256) / 255 }; };
+        const numAt = (key, v) => { const bd = binders && binders[key]; const arr = bd && bd.paintVertexArray && bd.paintVertexArray.float32; if (!arr) return null; const per = bd.paintVertexArray.bytesPerElement / 4; const x = arr[v * per]; return Number.isFinite(x) ? x : null; };
+        for (let i = 0; i < b.symbolInstances.length; i++) {
+          const si = b.symbolInstances.get(i);
+          const pl = placement.placements[si.crossTileID];
+          const vf = vl.feature(si.featureIndex);
+          if (!vf) continue;
+          const a = ll(si.anchorX, si.anchorY);
+          const item = { p: propsOf({ properties: vf.properties, geometry: { type: vf.type === 1 ? 'Point' : vf.type === 2 ? 'LineString' : 'Polygon' } }), anchor: px(a[0], a[1]), line: null, segment: 0, anchorName: null, text: false, icon: !!(pl && pl.icon), glyphs: null, size: bucketSize };
+          // a data-driven text-size (the badges: per-feature shrink) is evaluated here per feature
+          if (item.size == null) { const s = ev(layout('text-size'), z, item.p); item.size = typeof s === 'number' && Number.isFinite(s) ? s : null; }
+          const size = item.size;
+          const psis = [si.centerJustifiedTextSymbolIndex, si.leftJustifiedTextSymbolIndex, si.rightJustifiedTextSymbolIndex];
+          if (lv && dv && ov && size != null) {
+            for (const psi of psis) {
+              if (!(psi >= 0)) continue;
+              const ps = b.text.placedSymbolArray.get(psi);
+              if (ps.hidden) continue;
+              const v0 = ps.vertexStartIndex;
+              if (!ov[v0] || !Number.isFinite(dv[v0 * 3])) continue;
+              const fs = size / 24;
+              const glyphs = [];
+              let ok = true;
+              for (let g = 0; g < ps.numGlyphs && ok; g++) {
+                const corners = [];
+                for (let k = 0; k < 4; k++) {
+                  const v = v0 + g * 4 + k;
+                  let bx, by;
+                  if (mode === 'css') { bx = dv[3 * v]; by = dv[3 * v + 1]; }
+                  else if (mode === 'tilepx') { bx = o.x + dv[3 * v]; by = o.y + dv[3 * v + 1]; }
+                  else { const q = m.project(ll(lv[12 * v], lv[12 * v + 1])); bx = q.x; by = q.y; }
+                  if (!Number.isFinite(bx) || !Number.isFinite(by)) { ok = false; break; }
+                  const ang = dv[3 * v + 2]; const ox = lv[12 * v + 2] / 32 * fs, oy = lv[12 * v + 3] / 32 * fs;
+                  const ca = Math.cos(ang), sa = Math.sin(ang);
+                  corners.push(cssToPage(bx + ca * ox - sa * oy, by + sa * ox + ca * oy));
+                }
+                if (!ok) break;
+                const gv = v0 + g * 4;
+                glyphs.push({ c: corners, color: colorAt('text-color', gv), halo: colorAt('text-halo-color', gv), hw: numAt('text-halo-width', gv), op: numAt('text-opacity', gv) });
+              }
+              if (ok && glyphs.length) { item.text = true; item.glyphs = glyphs; }
+              break;
+            }
+          }
+          if (!item.text && pl && pl.text) {
+            // placed, but its quads could not be read: the fallback layout gets the line and the anchor
+            item.text = true;
+            const psi = psis.find((x) => x >= 0);
+            const ps = psi >= 0 ? b.text.placedSymbolArray.get(psi) : null;
+            if (ps && ps.lineLength > 1 && b.lineVertexArray) {
+              item.line = [];
+              for (let k = 0; k < ps.lineLength; k++) { const q = ll(b.lineVertexArray.getx(ps.lineStartIndex + k), b.lineVertexArray.gety(ps.lineStartIndex + k)); item.line.push(px(q[0], q[1])); }
+              item.segment = ps.segment;
+            }
+            const vo = placement.variableOffsets[si.crossTileID];
+            item.anchorName = vo ? vo.anchor : null;
+          }
+          if (item.text || item.icon) items.push(item);
+        }
+      }
+      return items;
+    }
+    // the fallback: a rendered feature as a symbol item at its point, or at
+    // the middle of its line
+    function fallbackItem(f) {
+      const g = f.geometry;
+      let a = asPoints(g)[0];
+      let line = null, segment = 0;
+      if (!a) { const ln = asLines(g)[0]; if (!ln) return null; a = ln[Math.floor(ln.length / 2)]; line = ln.map((c) => px(c[0], c[1])); segment = Math.max(0, Math.floor(ln.length / 2) - 1); }
+      return { p: propsOf(f), anchor: px(a[0], a[1]), line, segment, anchorName: null, text: true, icon: true, glyphs: null, size: null };
+    }
+
+    // Draws the symbols of one layer: icons (stop discs, badge boxes) and
+    // labels. A label with its glyph quads read from the renderer is set
+    // glyph by glyph onto those quads — each glyph's ink box centred where
+    // MapLibre's is — merged into one text object per straight row with
+    // TJ position adjustments, so it stays one editable line in Illustrator.
+    // Without quads (another MapLibre build, a glyph the sheet's font lacks)
+    // the label is laid out here: a point label at its anchor with the
+    // chosen variable anchor, a line label glyph by glyph along its line.
+    function drawSymbols(L, items, out) {
       const paint = (k) => m.getPaintProperty(L.id, k);
       const layout = (k) => m.getLayoutProperty(L.id, k);
-      const alpha = (a, fn) => { const k = alphaKey(a); if (!k) return fn(); out.push('q ' + k + ' gs'); fn(); out.push('Q'); };
-      for (const f of feats) {
-        const p = propsOf(f);
-        const g = f.geometry;
-        const textRaw = ev(layout('text-field'), z, p);
-        const text = textRaw === undefined || textRaw === null ? '' : String(textRaw);
-        const size = num(ev(layout('text-size'), z, p), 12) * S;
+      // one record per symbol: its operators, its text box (page pts) for
+      // the cross-tile placement, and whether the layer lets it overlap
+      let cur = null;
+      const push = (s) => cur.ops.push(s);
+      const alpha = (a, fn) => { const k = alphaKey(a); if (!k) return fn(); push('q ' + k + ' gs'); fn(); push('Q'); };
+      const allowOverlap = !!ev(layout('text-allow-overlap'), z, {}), ignorePlacement = !!ev(layout('text-ignore-placement'), z, {});
+      const padding = num(ev(layout('text-padding'), z, {}), 2);
+      const boxOf = (pts, grow) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const q of pts) { if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; } return x0 < x1 ? [x0 - grow, y0 - grow, x1 + grow, y1 + grow] : null; };
+      const numberLayer = /street-numbers|number-rows/.test(L.id);
+      const streetLayer = /street-names|highway-name/.test(L.id);
+      const inkBox = (font, ch) => {
+        // the glyph's ink box in text space, em units (fontkit through pdf-lib)
+        try {
+          const fk = font.embedder && font.embedder.font;
+          const gl = fk && fk.glyphForCodePoint(ch.codePointAt(0));
+          const bb = gl && gl.bbox;
+          if (!bb || !Number.isFinite(bb.minX) || bb.maxX < bb.minX) return null;
+          return { cx: (bb.minX + bb.maxX) / 2 / fk.unitsPerEm, cy: (bb.minY + bb.maxY) / 2 / fk.unitsPerEm };
+        } catch (e) { return null; }
+      };
+      const sameColor = (a, b) => a === b || (a && b && Math.abs(a.r - b.r) < 0.004 && Math.abs(a.g - b.g) < 0.004 && Math.abs(a.b - b.b) < 0.004);
+      for (const it of items) {
+        if (!it) continue;
+        const p = it.p;
+        const [ax, ay] = it.anchor;
+        if (!inRect(ax, ay)) continue;
+        cur = { ops: [], box: null, allow: allowOverlap, ignore: ignorePlacement, tile: st.tileK || 0 };
+        out.push(cur);
+        // the text as MapLibre's `format` sections: runs with their own colour
+        const sections = it.text ? sectionsOf(layout('text-field'), z, p) : [];
+        const tt = ev(layout('text-transform'), z, p);
+        const size0 = it.size != null ? it.size : num(ev(layout('text-size'), z, p), 12);
+        const size = size0 * S * (numberLayer ? NUMBER_BOOST : 1) * (streetLayer ? STREET_NAME_SCALE : 1);
         const fonts = ev(layout('text-font'), z, p);
         const bold = Array.isArray(fonts) ? /bold/i.test(fonts[0] || '') : /bold/i.test(String(fonts || ''));
         const font = bold ? fBold : fReg, fkey = bold ? 'F2' : 'F1';
-        const tc = col(ev(paint('text-color'), z, p), num(ev(paint('text-opacity'), z, p), 1)) || { r: 0, g: 0, b: 0, a: 1 };
+        const tc0 = col(ev(paint('text-color'), z, p), num(ev(paint('text-opacity'), z, p), 1)) || { r: 0, g: 0, b: 0, a: 1 };
+        const tc = streetLayer ? { ...STREET_NAME_INK, a: tc0.a } : tc0;
         const hw = num(ev(paint('text-halo-width'), z, p), 0);
         const hc = hw > 0 ? col(ev(paint('text-halo-color'), z, p), 1) : null;
         const rot = num(ev(layout('text-rotate'), z, p), 0);
         const off = ev(layout('text-offset'), z, p) || [0, 0];
         const radial = num(ev(layout('text-radial-offset'), z, p), 0);
-        let anchor = ev(layout('text-anchor'), z, p) || 'center';
+        const lh = num(ev(layout('text-line-height'), z, p), 1.2);
         const vanch = ev(layout('text-variable-anchor'), z, p);
-        if (Array.isArray(vanch) && vanch.length) anchor = vanch[0];
-        const allowOverlap = !!ev(layout('text-allow-overlap'), z, p);
-        const placement = ev(layout('symbol-placement'), z, p) || 'point';
-        const spacing = num(ev(layout('symbol-spacing'), z, p), 250) * S;
-        const icon = ev(layout('icon-image'), z, p);
+        const anchor = it.anchorName || (Array.isArray(vanch) && vanch.length ? vanch[0] : (ev(layout('text-anchor'), z, p) || 'center'));
+        const icon = it.icon ? ev(layout('icon-image'), z, p) : null;
         const iconSize = num(ev(layout('icon-size'), z, p), 1);
         const iconRot = num(ev(layout('icon-rotate'), z, p), 0);
         const maxWidthEm = num(ev(layout('text-max-width'), z, p), 10);
-        const t = clean(text, bold).replace(/\s+$/, '');
-        const tw1 = t ? font.widthOfTextAtSize(t, size) : 0;
-        // where: a point symbol at its anchor, a line symbol along the line
-        let anchors = [];
-        if (placement === 'point' || g.type === 'Point' || g.type === 'MultiPoint') {
-          anchors = asPoints(g).length ? asPoints(g).map((c) => px(c[0], c[1])) : (asLines(g)[0] ? [px(...asLines(g)[0][Math.floor(asLines(g)[0].length / 2)])] : []);
-        } else {
-          if (!t) continue;
-          for (const line of asLines(g)) {
-            if (line.length < 2) continue;
-            const pts = line.map((c) => px(c[0], c[1]));
-            let total = 0; const acc = [0];
-            for (let i = 1; i < pts.length; i++) { total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); acc.push(total); }
-            if (tw1 > total * 0.9) continue;
-            const at = (d) => { let i = 1; while (i < acc.length - 1 && acc[i] < d) i++; const tt = (d - acc[i - 1]) / Math.max(1e-6, acc[i] - acc[i - 1]); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * tt, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * tt, i]; };
-            const positions = total < spacing * 1.5 ? [total / 2] : [];
-            if (!positions.length) for (let d = spacing / 2; d <= total - spacing / 2 + 1; d += spacing) positions.push(d);
-            for (const d of positions) {
-              const half = tw1 / 2 + size * 0.4;
-              if (d - half < 0 || d + half > total) continue;
-              const [x0, y0] = at(d - half), [x1, y1] = at(d + half), [ax, ay] = at(d);
-              const chord = Math.hypot(x1 - x0, y1 - y0);
-              if (chord < tw1 * 0.98) continue; // the line folds back within the label
-              // straight enough: every vertex under the label within 0.35 em of the chord
-              const nx = -(y1 - y0) / chord, ny = (x1 - x0) / chord;
-              let bent = false;
-              for (let i = 0; i < pts.length; i++) { if (acc[i] <= d - half || acc[i] >= d + half) continue; const dev = Math.abs((pts[i][0] - x0) * nx + (pts[i][1] - y0) * ny); if (dev > size * 0.35) { bent = true; break; } }
-              if (bent) continue;
-              let ang = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI;
-              if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
-              anchors.push([ax, ay, true, ang]);
+        // the characters with their colours, in the fonts the sheet carries
+        const chars = [];
+        for (const sec of sections) {
+          const c = sec.color ? (col(sec.color, tc.a) || tc) : tc;
+          let txt = sec.text;
+          if (tt === 'uppercase') txt = txt.toUpperCase(); else if (tt === 'lowercase') txt = txt.toLowerCase();
+          for (const ch of clean(txt, bold)) chars.push({ ch, c });
+        }
+        while (chars.length && /\s/.test(chars[chars.length - 1].ch) && chars[chars.length - 1].ch !== '\n') chars.pop();
+        const t = chars.map((q) => q.ch).join('');
+        // one drawing per symbol: the same symbol comes back from every viewport tile it touches
+        const key = L.id + '|' + t + '|' + Math.round(ax / 2) + ',' + Math.round(ay / 2) + '|' + (icon || '');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const adv = chars.map((q) => (q.ch === '\n' ? 0 : font.widthOfTextAtSize(q.ch, size)));
+        const rows = t ? breakLines(chars, adv, maxWidthEm * size) : [];
+        const rowW = rows.map((r) => r.reduce((a, i) => a + adv[i], 0));
+        const tw = Math.max(0, ...rowW);
+        const th = rows.length * lh * size;
+        if (typeof icon === 'string' && icon) {
+          const rim = col((icon.match(/#[0-9a-f]{6}/i) || [null])[0], 1);
+          if (/^badge-/.test(icon)) {
+            const boxW = tw + 7 * S, boxH = th + 3 * S, dx = off[0] * size, dy = -off[1] * size;
+            const rc = rim || { r: 0.2, g: 0.2, b: 0.2 };
+            alpha(0.92, () => push('1 1 1 rg ' + rgbS(rc) + ' RG ' + f2(1.1 * S) + ' w 0 J 1 j [] 0 d ' + rrect(ax + dx - boxW / 2, ay + dy - boxH / 2, boxW, boxH, Math.min(2.5 * S, boxH / 3)) + ' B'));
+            counts.icons++;
+          } else if (/^(stop|dot)-/.test(icon)) {
+            // The stop markers, larger than on screen (user rule: they must
+            // be visible on the poster): a white half disc rimmed in the
+            // line colour with the bulge on the pole's side, the terminus
+            // (-t) filled with a darker rim, metro stations a full disc.
+            const c = rim || { r: 0, g: 0.35, b: 0.66 };
+            const term = /-t$/.test(icon);
+            const fill = term ? c : { r: 1, g: 1, b: 1 };
+            const edge = term ? { r: c.r * 0.65, g: c.g * 0.65, b: c.b * 0.65 } : c;
+            const r = (/^dot-/.test(icon) ? DOT_R : STOP_R) * iconSize * S, lw = STOP_RIM * iconSize * S;
+            const pre = rgbS(fill) + ' rg ' + rgbS(edge) + ' RG ' + f2(lw) + ' w 1 J 1 j [] 0 d ';
+            if (/^dot-/.test(icon)) {
+              push(pre + circle(ax, ay, r) + ' B');
+            } else {
+              const th0 = (-iconRot) * Math.PI / 180; let d = '';
+              for (let k = 0; k <= 16; k++) { const a0 = th0 + Math.PI * k / 16; d += f2(ax + r * Math.cos(a0)) + ' ' + f2(ay + r * Math.sin(a0)) + (k ? ' l ' : ' m '); }
+              push(pre + d + 'h B');
             }
+            counts.icons++;
           }
         }
-        for (const a of anchors) {
-          const [ax, ay] = a;
-          if (!inRect(ax, ay)) continue;
-          // one drawing per symbol: the same symbol comes back from every tile it touches
-          const key = L.id + '|' + t + '|' + Math.round(ax / 3) + ',' + Math.round(ay / 3) + '|' + (icon || '');
-          if (seen.has(key)) continue;
-          seen.add(key);
-          const lines = t ? wrap(t, font, size, maxWidthEm * size) : [];
-          const tw = Math.max(0, ...lines.map((l) => font.widthOfTextAtSize(l, size)));
-          const th = lines.length * size * 1.1;
-          if (typeof icon === 'string' && icon) {
-            const rim = col((icon.match(/#[0-9a-f]{6}/i) || [null])[0], 1);
-            if (/^badge-/.test(icon)) {
-              const boxW = tw + 7 * S, boxH = th + 3 * S, dx = off[0] * size, dy = -off[1] * size;
-              const rc = rim || { r: 0.2, g: 0.2, b: 0.2 };
-              alpha(0.92, () => out.push('1 1 1 rg ' + rgbS(rc) + ' RG ' + f2(1.1 * S) + ' w 0 J 1 j [] 0 d ' + f2(ax + dx - boxW / 2) + ' ' + f2(ay + dy - boxH / 2) + ' ' + f2(boxW) + ' ' + f2(boxH) + ' re B'));
-              placed.add([ax + dx - boxW / 2, ay + dy - boxH / 2, ax + dx + boxW / 2, ay + dy + boxH / 2]);
-              counts.icons++;
-            } else if (/^(stop|dot)-/.test(icon)) {
-              // The stop markers, larger than on screen (user rule: they must
-              // be visible on the poster): a white half disc rimmed in the
-              // line colour with the bulge on the pole's side, the terminus
-              // (-t) filled with a darker rim, metro stations a full disc.
-              const c = rim || { r: 0, g: 0.35, b: 0.66 };
-              const term = /-t$/.test(icon);
-              const fill = term ? c : { r: 1, g: 1, b: 1 };
-              const edge = term ? { r: c.r * 0.65, g: c.g * 0.65, b: c.b * 0.65 } : c;
-              const r = STOP_R * iconSize * S, lw = STOP_RIM * iconSize * S;
-              const pre = rgbS(fill) + ' rg ' + rgbS(edge) + ' RG ' + f2(lw) + ' w 1 J 1 j [] 0 d ';
-              if (/^dot-/.test(icon)) {
-                out.push(pre + circle(ax, ay, r) + ' B');
-                placed.add([ax - r - lw, ay - r - lw, ax + r + lw, ay + r + lw]);
-              } else {
-                const th0 = (-iconRot) * Math.PI / 180; let d = '';
-                let bx0 = ax, by0 = ay, bx1 = ax, by1 = ay;
-                for (let k = 0; k <= 16; k++) { const a0 = th0 + Math.PI * k / 16; const qx = ax + r * Math.cos(a0), qy = ay + r * Math.sin(a0); d += f2(qx) + ' ' + f2(qy) + (k ? ' l ' : ' m '); bx0 = Math.min(bx0, qx); by0 = Math.min(by0, qy); bx1 = Math.max(bx1, qx); by1 = Math.max(by1, qy); }
-                out.push(pre + d + 'h B');
-                placed.add([bx0 - lw, by0 - lw, bx1 + lw, by1 + lw]);
-              }
-              counts.icons++;
-            }
+        if (!t) continue;
+
+        // ---- the glyphs on MapLibre's quads ----
+        // MapLibre keeps a quad per character except the line breaks (a
+        // space's quad is empty); the counts must agree for the mapping
+        // (a space at a wrap point is trimmed with the row, so it has none
+        // either: the quads are matched to the characters row by row)
+        let inked = null;
+        if (it.glyphs) {
+          // a space's quad is the glyph's empty rect plus its 4-unit border: a
+          // square of a third of an em, where every inked glyph is wider
+          const gq = it.glyphs; const sq = 0.36 * size0 * S;
+          const isSpaceQuad = (q) => Math.hypot(q.c[1][0] - q.c[0][0], q.c[1][1] - q.c[0][1]) < sq && Math.hypot(q.c[2][0] - q.c[0][0], q.c[2][1] - q.c[0][1]) < sq;
+          inked = []; let qi = 0; let ok = true;
+          for (const c of chars) {
+            if (c.ch === '\n') continue;
+            const ws = /\s/.test(c.ch);
+            if (qi >= gq.length) { if (ws) continue; ok = false; break; }
+            const spq = isSpaceQuad(gq[qi]);
+            if (ws && !spq) continue; // the space was trimmed at a wrap: no quad
+            if (!ws && spq) { ok = false; break; }
+            inked.push(c); qi++;
           }
-          if (!t) continue;
-          const ang = a[2] ? a[3] : rot;
-          const th1 = (-ang) * Math.PI / 180;
+          if (!ok || qi !== gq.length) inked = null;
+        }
+        if (window.__pdfDebug) (window.__pdfDebug.labels = window.__pdfDebug.labels || []).push(L.id + '|' + t.replace(/\n/g, '/') + '|' + (it.glyphs ? it.glyphs.length : 'none') + '/' + (inked ? inked.length : 'x'));
+        if (inked) {
+          // each glyph: its origin (page pts), its direction, its colour
+          const gs = [];
+          for (let i = 0; i < inked.length; i++) {
+            if (/\s/.test(inked[i].ch)) continue;
+            const q = it.glyphs[i];
+            const cx = (q.c[0][0] + q.c[1][0] + q.c[2][0] + q.c[3][0]) / 4, cy = (q.c[0][1] + q.c[1][1] + q.c[2][1] + q.c[3][1]) / 4;
+            let dx = q.c[1][0] - q.c[0][0], dy = q.c[1][1] - q.c[0][1];
+            const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+            const ib = inkBox(font, inked[i].ch) || { cx: 0.25, cy: 0.3 };
+            const ox = ib.cx * size, oy = ib.cy * size;
+            let c = q.color || inked[i].c;
+            if (streetLayer) c = { ...STREET_NAME_INK, a: c.a };
+            const op = q.op != null ? q.op : tc.a;
+            gs.push({ ch: inked[i].ch, x: cx - dx * ox + dy * oy, y: cy - dy * ox - dx * oy, dx, dy, c: { r: c.r, g: c.g, b: c.b, a: op }, hw: q.hw != null ? q.hw : hw, hc: q.halo || hc });
+          }
+          if (!gs.length) continue;
+          cur.box = boxOf(it.glyphs.flatMap((q) => q.c), (gs[0].hw + padding) * S);
+          if (streetLayer && STREET_NAME_SCALE !== 1 && gs.length > 1) {
+            // the smaller street name keeps its letter spacing: the whole
+            // label shrinks about its centre, not each glyph about its own
+            let mx = 0, my = 0; for (const g of gs) { mx += g.x; my += g.y; } mx /= gs.length; my /= gs.length;
+            for (const g of gs) { g.x = mx + (g.x - mx) * STREET_NAME_SCALE; g.y = my + (g.y - my) * STREET_NAME_SCALE; }
+          }
+          // straight rows: consecutive glyphs on one baseline and direction
+          const rowsG = [];
+          for (const g of gs) {
+            const r = rowsG[rowsG.length - 1];
+            if (r) {
+              const f = r.g[0];
+              const cross = Math.abs(f.dx * g.dy - f.dy * g.dx);
+              const v = (g.x - f.x) * -f.dy + (g.y - f.y) * f.dx;
+              if (cross < 0.006 && Math.abs(v) < 0.08 * size) { r.g.push(g); continue; }
+            }
+            rowsG.push({ g: [g] });
+          }
+          // one text object per row: Tm at the first glyph, TJ with the
+          // adjustment (thousandths of em, positive = back) that puts each
+          // next glyph where its quad is
+          const rowOps = (r, halo) => {
+            const f = r.g[0];
+            const th1 = Math.atan2(f.dy, f.dx), a = Math.cos(th1), b = Math.sin(th1);
+            let s = 'BT /' + fkey + ' ' + f2(size) + ' Tf ' + f2(a) + ' ' + f2(b) + ' ' + f2(-b) + ' ' + f2(a) + ' ' + f2(f.x) + ' ' + f2(f.y) + ' Tm ';
+            let pen = 0; let cur = null; let arr = null;
+            for (const g of r.g) {
+              const u = (g.x - f.x) * f.dx + (g.y - f.y) * f.dy;
+              const adj = Math.round((pen - u) / size * 1000);
+              if (!halo && !sameColor(cur, g.c)) {
+                if (arr !== null) s += arr + '] TJ ';
+                s += rgbS(g.c) + ' rg '; cur = g.c; arr = '[';
+              } else if (arr === null) arr = '[';
+              if (adj) arr += (adj > 0 ? ' ' : ' ') + adj + ' ';
+              arr += font.encodeText(g.ch).toString();
+              pen = u + font.widthOfTextAtSize(g.ch, size);
+            }
+            if (arr !== null) s += arr + '] TJ';
+            return s + ' ET';
+          };
+          const rhw = gs[0].hw, rhc = gs[0].hc;
+          if (rhc && rhw > 0) {
+            push('q 1 Tr ' + f2(rhw * 2 * S) + ' w 1 j ' + rgbS(rhc) + ' RG');
+            for (const r of rowsG) push(rowOps(r, true));
+            push('Q');
+          }
+          alpha(gs[0].c.a, () => { for (const r of rowsG) { push(rowOps(r, false)); counts.texts++; } });
+          continue;
+        }
+
+        // ---- the fallback layout ----
+        // glyph runs: {s, x, y, ang, c} — a run of same-coloured characters
+        const haloOps = (runs) => {
+          if (!hc) return;
+          push('q 1 Tr ' + f2(hw * 2 * S) + ' w 1 j ' + rgbS(hc) + ' RG');
+          for (const r of runs) push(textOp(font, fkey, r.s, size, r.x, r.y, r.ang, ''));
+          push('Q');
+        };
+        const fillOps = (runs) => alpha(tc.a, () => { for (const r of runs) { push(textOp(font, fkey, r.s, size, r.x, r.y, r.ang, rgbS(r.c) + ' rg ')); counts.texts++; } });
+        const boxOfRuns = (runs) => { const pts = []; for (const r of runs) { const w = font.widthOfTextAtSize(r.s, size); const th2 = (-r.ang) * Math.PI / 180, cx = Math.cos(th2), sx = Math.sin(th2); pts.push([r.x, r.y], [r.x + cx * w, r.y + sx * w], [r.x - sx * size, r.y + cx * size], [r.x + cx * w - sx * size, r.y + sx * w + cx * size]); } return boxOf(pts, (hw + padding) * S); };
+
+        if (it.line && it.line.length > 1) {
+          // ---- along the line, glyph by glyph ----
+          const pts = it.line;
+          const acc = [0];
+          for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+          const total = acc[acc.length - 1];
+          if (total <= 0) continue;
+          const sg = Math.min(Math.max(0, it.segment), pts.length - 2);
+          const s0 = acc[sg] + Math.hypot(ax - pts[sg][0], ay - pts[sg][1]); // the anchor's own arc position
+          const at = (d) => {
+            d = Math.max(0, Math.min(total, d));
+            let i = 1; while (i < acc.length - 1 && acc[i] < d) i++;
+            const seg = Math.max(1e-6, acc[i] - acc[i - 1]);
+            const tt2 = (d - acc[i - 1]) / seg;
+            const dx = (pts[i][0] - pts[i - 1][0]) / seg, dy = (pts[i][1] - pts[i - 1][1]) / seg;
+            return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * tt2, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * tt2, dx, dy];
+          };
+          const w = adv.reduce((a, b) => a + b, 0);
+          // read left to right: walk the line the way that keeps the text upright
+          const e0 = at(s0 - w / 2), e1 = at(s0 + w / 2);
+          const flip = e1[0] < e0[0];
+          const runs = [];
+          let run = -w / 2;
+          for (let i = 0; i < chars.length; i++) {
+            const centre = run + adv[i] / 2; run += adv[i];
+            if (/\s/.test(chars[i].ch)) continue;
+            const q = at(s0 + (flip ? -centre : centre));
+            const dx = flip ? -q[2] : q[2], dy = flip ? -q[3] : q[3];
+            const ang = -Math.atan2(dy, dx) * 180 / Math.PI; // textOp takes MapLibre's clockwise degrees
+            // glyph centred on the line: back by half its advance along the
+            // text, down by a third of the size to the baseline
+            runs.push({ s: chars[i].ch, x: q[0] - dx * adv[i] / 2 + dy * 0.33 * size, y: q[1] - dy * adv[i] / 2 - dx * 0.33 * size, ang, c: chars[i].c });
+          }
+          haloOps(runs); fillOps(runs); cur.box = boxOfRuns(runs);
+        } else {
+          // ---- at the point: the block placed by anchor, offset in the
+          // label's own (rotated) frame, rows justified by the anchor ----
+          const th1 = (-rot) * Math.PI / 180;
           const dir = [Math.cos(th1), Math.sin(th1)], perp = [-Math.sin(th1), Math.cos(th1)];
           const R = radial * size;
           const map8 = { left: [R, 0], right: [-R, 0], top: [0, -R], bottom: [0, R], 'top-left': [R * 0.7, -R * 0.7], 'top-right': [-R * 0.7, -R * 0.7], 'bottom-left': [R * 0.7, R * 0.7], 'bottom-right': [-R * 0.7, R * 0.7], center: [0, 0] };
-          const candidates = Array.isArray(vanch) && vanch.length && !a[2] ? vanch : [anchor];
-          let chosen = null;
-          for (const an of candidates) {
-            let hx = 0.5, hy = 0.5;
-            if (/left/.test(an)) hx = 0; if (/right/.test(an)) hx = 1;
-            if (/top/.test(an)) hy = 1; if (/bottom/.test(an)) hy = 0;
-            let ox = off[0] * size, oy = -off[1] * size;
-            if (radial && !a[2]) { const v = map8[an] || [0, 0]; ox += v[0]; oy += v[1]; }
-            const cx = ax + ox, cy = ay + oy;
-            const bx = cx + dir[0] * (tw / 2 - tw * hx) + perp[0] * (th / 2 - th * hy);
-            const by = cy + dir[1] * (tw / 2 - tw * hx) + perp[1] * (th / 2 - th * hy);
-            const ex = Math.abs(dir[0]) * tw / 2 + Math.abs(perp[0]) * th / 2, ey = Math.abs(dir[1]) * tw / 2 + Math.abs(perp[1]) * th / 2;
-            const pad = size * 0.15;
-            const box = [bx - ex - pad, by - ey - pad, bx + ex + pad, by + ey + pad];
-            if (allowOverlap || !placed.hit(box)) { chosen = { hx, hy, cx, cy, box }; break; }
-          }
-          if (!chosen) continue;
-          // a street name once per spacing: the same name near an already
-          // drawn one (any tile, any piece of the street) is skipped
-          if (a[2]) {
-            const spots = nameSpots.get(t) || [];
-            if (spots.some((q) => Math.hypot(q[0] - chosen.cx, q[1] - chosen.cy) < spacing * 0.8)) continue;
-            spots.push([chosen.cx, chosen.cy]); nameSpots.set(t, spots);
-          }
-          placed.add(chosen.box);
-          const rows = lines.map((ln, i) => {
-            const lw = font.widthOfTextAtSize(ln, size);
-            const rowY = (lines.length - 1 - i) * size * 1.1 - th * chosen.hy + th / 2 - size * 0.32;
-            const rowX = chosen.hx === 0 ? 0 : chosen.hx === 1 ? -lw : -lw / 2;
-            return { ln, x: chosen.cx + dir[0] * rowX + perp[0] * rowY, y: chosen.cy + dir[1] * rowX + perp[1] * rowY };
+          let hx = 0.5, hy = 0.5;
+          if (/left/.test(anchor)) hx = 0; if (/right/.test(anchor)) hx = 1;
+          if (/top/.test(anchor)) hy = 1; if (/bottom/.test(anchor)) hy = 0;
+          let ox = off[0] * size, oy = -off[1] * size;
+          if (radial) { const v = map8[anchor] || [0, 0]; ox += v[0]; oy += v[1]; }
+          const cx = ax + dir[0] * ox + perp[0] * oy, cy = ay + dir[1] * ox + perp[1] * oy;
+          const top = th * (1 - hy); // the block's top edge, up from the anchor point
+          const runs = [];
+          rows.forEach((row, i) => {
+            const rowY = top - i * lh * size - lh * size / 2 - 0.32 * size;
+            let x = hx === 0 ? 0 : hx === 1 ? -rowW[i] : -rowW[i] / 2;
+            let j = 0;
+            while (j < row.length) {
+              let k = j; let s = ''; let wdt = 0;
+              while (k < row.length && chars[row[k]].c === chars[row[j]].c) { s += chars[row[k]].ch; wdt += adv[row[k]]; k++; }
+              runs.push({ s, x: cx + dir[0] * x + perp[0] * rowY, y: cy + dir[1] * x + perp[1] * rowY, ang: rot, c: chars[row[j]].c });
+              x += wdt; j = k;
+            }
           });
-          // the halo: the same text once more underneath, stroked (render
-          // mode 1) in the halo colour, the stroke twice the halo width
-          if (hc) {
-            out.push('q 1 Tr ' + f2(hw * 2 * S) + ' w 1 j ' + rgbS(hc) + ' RG');
-            for (const r of rows) out.push(textOp(font, fkey, r.ln, size, r.x, r.y, ang, ''));
-            out.push('Q');
-          }
-          alpha(tc.a, () => { for (const r of rows) { out.push(textOp(font, fkey, r.ln, size, r.x, r.y, ang, rgbS(tc) + ' rg ')); counts.texts++; } });
+          haloOps(runs); fillOps(runs); cur.box = boxOfRuns(runs);
         }
       }
     }
