@@ -119,6 +119,9 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
 .sw.line { width: 26px; height: 5px; background: var(--kmk); border-radius: 3px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #ccd; }
 .sw.line.tram { background: #d6212b; }
 .sublegend { font-size: 11.5px; color: #445; padding-left: 26px; }
+/* sublegends mix text with inline colour chips — flex would scatter them, and
+   `.legend li` is (0,1,1) so a bare `.sublegend` never beats it */
+.legend li.sublegend { display: block; }
 .sublegend .mini { display: inline-block; width: 12px; height: 5px; border-radius: 3px; margin: 0 3px 0 7px; vertical-align: 2px; }
 .sublegend .mini:first-child { margin-left: 0; }
 .sw.stop { width: 11px; height: 11px; border-radius: 50%; background: #fff; border: 2.5px solid var(--kmk); }
@@ -406,3 +409,10 @@ body.lines-view p.lines-only { display: block; }
 }
 .city-switch nav .city-filter:focus { outline: none; border-color: var(--kmk); box-shadow: 0 0 0 2px rgba(0, 89, 169, 0.2); }
 @media (pointer: coarse) { .city-switch nav .city-filter { font-size: 16px; } }
+
+/* SKA — Koleje Małopolskie's commuter rail, in the operator's own line colours
+   (the family lets commuter rail keep its livery, as a metro does) */
+.sw.line.ska { background: linear-gradient(90deg, #60B6F0 0 33%, #D4328A 33% 66%, #F2C43B 66% 100%); }
+.mini.ska1 { background: #60B6F0; }
+.mini.ska2 { background: #D4328A; }
+.mini.ska3 { background: #F2C43B; }

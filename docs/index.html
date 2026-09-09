@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Kraków &amp; Małopolska feeder lines (MLD) — interactive map</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=20260826c">
+<link rel="stylesheet" href="style.css?v=20260909b">
 </head>
 <body>
 <div id="map"></div>
@@ -123,6 +123,8 @@
     <li><label><input type="checkbox" id="toggle-bus" checked> <span class="sw line corridor-only"></span> Bus routes</label></li>
     <li class="sublegend corridor-only">KMK Kraków (MPK) &middot; Małopolskie Linie Dowozowe A1&ndash;A71 (Koleje Małopolskie) &middot; Wieliczka commune buses WST (B2&ndash;Z1) &mdash; listed after the KMK numbers</li>
     <li><label><input type="checkbox" id="toggle-tram" checked> <span class="sw line corridor-only tram"></span> Tram routes</label></li>
+    <li><label><input type="checkbox" id="toggle-ska" checked> <span class="sw line corridor-only ska"></span> Koleje Ma&#322;opolskie (rail)</label></li>
+    <li class="sublegend corridor-only">SKA1 <span class="mini ska1"></span> SKA2 <span class="mini ska2"></span> SKA3 <span class="mini ska3"></span> in the operator&rsquo;s colours &mdash; and the trains it runs under its own K numbers, in rail purple: <strong>K5</strong> Krak&oacute;w &ndash; Zakopane (the Luxtorpeda) and <strong>K7/K71</strong> Krak&oacute;w &ndash; Nowy S&#261;cz / Jas&#322;o &ndash; Krynica (the Dunajec, the Hubal and the unnumbered KML). Each is drawn under the name its own timetable prints, so no corridor is lost to a shared number. M7 Muszyna &ndash; Poprad-Tatry runs abroad and stays off this sheet.</li>
     <li><span class="sw stop"></span> Stop</li>
     <li><span class="sw terminus"></span> Terminus</li>
   </ul>
@@ -164,8 +166,8 @@
   <label class="debug"><input type="checkbox" id="toggle-shape"> show raw GTFS shapes (QA)</label>
 </aside>
 <script src="vendor/maplibre-gl.js"></script>
-<script src="app.js?v=20260908n"></script>
-<script src="pdf-export.js?v=20260908i"></script>
+<script src="app.js?v=20260909b"></script>
+<script src="pdf-export.js?v=20260909b"></script>
 <script>
 (() => {
   // City-switch filter: type instead of scrolling. Matches the English name,

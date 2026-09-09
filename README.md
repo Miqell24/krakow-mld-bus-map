@@ -1,29 +1,66 @@
 # krakow-mld-bus-map — Kraków + Małopolska feeder lines (MLD)
 
 The second variant of the Kraków map (23.08.2026): the KMK network exactly as on
-[krakow-bus-map](https://miqell24.github.io/krakow-bus-map/) **plus the
-Małopolskie Linie Dowozowe** — the Koleje Małopolskie feeder buses A1…A71 that
-run from the railway stations across the whole voivodeship, from Olkusz and
-Oświęcim to Tarnów, Nowy Sącz, Podhale and Poprad — on one sheet of all
-Małopolska. **164 KMK bus lines + 67 MLD lines + 10 Wieliczka commune buses (WST) + 23 tram lines** drawn exactly
-along roadways and tracks (own HMM/Viterbi map matching on an OSM graph), line
-numbers written parallel to every street they use, labeled stops, true roundabout
-arcs. The MLD numbers follow the KMK numbers in every list (street rows, badges,
-panel). The original Kraków map stays untouched — this is a separate project
-(port 8156, `npm run serve`).
+[krakow-bus-map](https://miqell24.github.io/krakow-bus-map/) **plus everything
+else Koleje Małopolskie run** — the Małopolskie Linie Dowozowe feeder buses
+A1…A74, which fan out from the railway stations across the whole voivodeship
+from Olkusz and Oświęcim to Tarnów, Nowy Sącz, Podhale and Poprad, and (since
+9.09.2026) **the operator's whole rail network** those buses feed: the three
+numbered SKA lines and the trains it brands by name instead — Dunajec
+(Oświęcim – Kraków – Nowy Sącz), Hubal (Jasło – Tarnów – Kraków), Luxtorpeda
+(Kraków – Zakopane) and the unnumbered KML from Nowy Sącz through Gorlice to
+Jasło — on one sheet
+of all Małopolska. **277 lines / 13 162 km**: 176 KMK buses, 70 MLD lines, 10
+Wieliczka commune buses (WST), 23 trams and the operator's eight rail lines,
+drawn exactly along
+roadways and tracks (own HMM/Viterbi map matching on an OSM graph), line
+numbers written parallel to every street they use, labeled stops, true
+roundabout arcs. Weighted mean matching error 0.5 m. The original Kraków map
+stays untouched — this is a separate project (port 8156, `npm run serve`).
 
-Feeds: ZTP Kraków (buses `data/gtfs`, trams `data/gtfs-t`), the MLD feed from
-files.girlc.at (`data/gtfs-mld`, CC0, regenerated nightly; no shapes, no
-direction_id — stop sequences are the matching observations, the headsign the
-direction key; the two "ZKA" routes are rail-replacement buses and stay out) and
-the Wieliczka commune buses (`data/gtfs-wst`, B2…Z1): WST publishes no GTFS, so
-`pipeline/kp-wst-gtfs.py` builds one from the operator's KiedyPrzyjedzie timetable
-API (the same calls the public web page makes; no shapes, no direction_id).
-The road graph is the Kraków extract plus a regional extract of Małopolska
-(Overpass in tiles, `pipeline/osm-region.py` keeps the ways within 2 km of an
-MLD stop, merged at load via `cfg.osmFiles`). Local only, not published.
+Feeds: ZTP Kraków (buses `data/gtfs`, trams `data/gtfs-t`); the MLD feed from
+**the operator's own file** (`data/gtfs-mld`,
+gtfs.kolejemalopolskie.com.pl/GTFS-ST/GTFS.zip, the one odt.org.pl lists —
+since 9.09.2026 in place of the CC0 mirror at files.girlc.at, because the
+producer's file ships SHAPES and the mirror does not: the MLD corridors are
+drawn from the operator's own geometry now, not reconstructed from stop
+sequences; the "ZKA" rail-replacement routes stay out); the rail lines
+(`data/gtfs-ska`) from gtfs.kasznia.net's sanitised copy of Koleje
+Małopolskie's rail timetable, which is the only place the line numbers and the
+train names survive — the producer files every train under the brand "KML"; and the Wieliczka commune
+buses (`data/gtfs-wst`, B2…Z1): WST publishes no GTFS, so
+`pipeline/kp-wst-gtfs.py` builds one from the operator's KiedyPrzyjedzie
+timetable API (the same calls the public web page makes; no shapes, no
+direction_id).
 
-**Live map:** not published (local build on port 8156).
+The road graph is the Kraków extract plus a regional extract of Małopolska,
+both cut from the Geofabrik małopolskie/świętokrzyskie extracts by
+`pipeline/pbf-cut.py` (Overpass answered 504 for an hour on 9.09.2026);
+`pipeline/osm-region.py` keeps the regional ways within 2 km of an MLD stop and
+merges them at load via `cfg.osmFiles`. The rail lines ride the rail slice of the graph
+with the rail-trunk treatment (wide ribbon, station discs, names that never
+fade), drawn WHOLE — SKA3 is 142 km end to end and the Dunajec calls at 53
+stations. SKA1–SKA3 keep the operator's own colours, the named trains and the
+KML take the rail purple (the Berlin arrangement). The rail cut therefore
+reaches Zakopane and Jasło, and reads three Geofabrik extracts — małopolskie,
+świętokrzyskie and podkarpackie. **The one train that leaves the country stays
+out**: the Beliansky Express runs Muszyna – Plavec into Slovakia, and this is a
+Małopolska sheet.
+
+**What the operator calls these trains.** Koleje Małopolskie's own timetable page
+lists eight rail relations: SKA1, SKA2 (two branches: Miechów – Sędziszów and
+Skawina – Zator – Oświęcim), SKA3 (Tarnów, and Trzebinia – Oświęcim), **K5**
+Kraków – Zakopane, **K7/K71** Kraków – Nowy Sącz / Jasło – Krynica-Zdrój, and
+**M7** Muszyna – Poprad-Tatry. The SKA numbers reach the feed; the K and M ones
+do not — there the same trains carry their brand names, which is what this map
+prints: **K5 is the Luxtorpeda**, and **K7/K71 is the Dunajec, the Hubal and the
+unnumbered KML** between them. They stay separate keys on purpose: filed under
+one "K7" the three would share a direction key and two of the three corridors —
+Kraków – Tarnów – Gorlice – Jasło and Nowy Sącz – Gorlice – Jasło — would lose
+their geometry to the longest of them. M7 is the cross-border train and is not
+on this sheet.
+
+**Live map:** https://miqell24.github.io/krakow-mld-bus-map/ (local build on port 8156).
 
 ## Network diagram
 

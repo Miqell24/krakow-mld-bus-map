@@ -143,16 +143,65 @@ const MODES = [{
   ],
 }];
 const tramAll = tramLines.length === 1 && tramLines[0] === 'all';
-// no rail trunk on this sheet (no metro, no suburban rail drawn) — the engine's
-// metro treatment stays switched off
-const isRailTrunk = () => false;
-if (tramAll || tramLines.length) MODES.push({
+// The rail network of Koleje Małopolskie gets the rail-trunk treatment the
+// family gives a metro or an S-Bahn: a wide ribbon, station discs and names
+// that never fade. It is the third thing
+// Koleje Małopolskie put on this sheet, beside the MLD buses.
+// Everything Koleje Małopolskie run on rails gets the rail-trunk treatment
+// (wide ribbon, station discs, names that never fade): the three numbered SKA
+// lines and the trains the operator brands by NAME instead of by number —
+// Dunajec, Hubal, Luxtorpeda — plus the unnumbered regional service the feed
+// files as "KML" (Nowy Sącz – Gorlice – Jasło).
+const KM_RAIL = /^(SKA\d|KML$|Dunajec|Hubal|Luxtorpeda|Jaskółka|Włóczykij|Mościcki)/;
+const isRailTrunk = (l) => KM_RAIL.test(l);
+const tramSel = tramLines.filter((l) => !isRailTrunk(l));
+const skaSel = tramLines.filter(isRailTrunk);
+if (tramAll || tramSel.length) MODES.push({
   mode: 'tram', label: 'trams', osmFiles: ['data/osm/krakow-tram.json'],
-  graphMode: 'tram', color: '#d6212b', colorDark: '#7c1116',
-  all: tramAll, lines: tramAll ? [] : tramLines,
+  graphMode: 'tram', railKeep: new Set(['tram', 'light_rail']),
+  color: '#d6212b', colorDark: '#7c1116',
+  all: tramAll, lines: tramAll ? [] : tramSel,
   feeds: [
     // ZTP's tram feed codes its trams as extended type 900 (not the plain 0)
     { tag: 'kmkt', dir: 'data/gtfs-t', mapKey: (sn) => sn, routeTypes: ['0', '900'] },
+  ],
+});
+if (tramAll || skaSel.length) MODES.push({
+  // SKA1 Wieliczka Rynek-Kopalnia – Kraków Główny – Kraków Lotnisko,
+  // SKA2 Sędziszów – Kraków – Oświęcim, SKA3 Tarnów – Kraków – Oświęcim, in
+  // Koleje Małopolskie's own colours (the feed ships them, and commuter rail
+  // is the family's exception to the mode-colour rule). Drawn WHOLE — which on
+  // a Małopolska sheet is what the trains actually are.
+  mode: 'tram', label: 'Koleje Małopolskie', osmFiles: ['data/osm/krakow-rail.json'],
+  graphMode: 'tram', railKeep: new Set(['rail']),
+  railExtra: (e) => ['construction', 'disused', 'proposed'].includes(e.tags?.railway)
+    && (e.tags?.usage === 'main' || e.tags?.construction === 'rail' || e.tags?.disused === 'rail'),
+  color: '#a518a3', colorDark: '#5a0c59',
+  all: tramAll, lines: tramAll ? [] : skaSel,
+  feeds: [
+    // Koleje Małopolskie's rail timetable, sanitised by gtfs.kasznia.net: the
+    // producer's own file files every train under the brand ("KML", plus the
+    // named expresses) and never names a line, so SKA1–SKA3 exist only there.
+    // No shapes — the station sequence is the observation, as in Zurich.
+    // Every rail route of the operator, not only the numbered ones: route_type
+    // 2 takes SKA1–SKA3 and leaves the ZKA replacement buses (type 3) out by
+    // itself. A route with no short name is one of the named trains, and the
+    // feed writes those in capitals — printed the way the timetable does.
+    // Every rail route of the operator, not only the numbered ones: route_type
+    // 2 takes SKA1–SKA3 and leaves the ZKA replacement buses (type 3) out by
+    // itself. A route with no short name is one of the named trains, and the
+    // feed writes those in capitals — printed the way the timetable does.
+    // skipRoute: the Beliansky Express is the one Koleje Małopolskie train
+    // that runs ABROAD (Muszyna – Plavec, Slovakia); this sheet is Małopolska,
+    // so it stays out.
+    { tag: 'ska', dir: 'data/gtfs-ska', routeTypes: ['2'],
+      skipRoute: (r) => /BELIANSKY/i.test(`${r.route_short_name || ''} ${r.route_long_name || ''} ${r.route_id || ''}`),
+      mapKey: (sn, r) => {
+        const n = (sn || r.route_long_name || r.route_id || '').trim();
+        if (!n) return null;
+        if (/^SKA\d/.test(n) || n === 'KML') return n;
+        return n.split(/\s+/).map((w) => w[0] + w.slice(1).toLowerCase()).join(' ');
+      } },
   ],
 });
 
@@ -266,7 +315,9 @@ async function processMode(cfg) {
       if (feed.routeTypes && !feed.routeTypes.includes((r.route_type || '').trim())) continue;
       if (feed.skipRoute && feed.skipRoute(r)) continue;
       // feed quirk: some short names carry stray whitespace ("14 " vs "14")
-      const key = feed.mapKey((r.route_short_name || '').trim());
+      // the row rides along: a feed that names its trains instead of numbering
+      // them keeps the name in route_long_name (Koleje Małopolskie)
+      const key = feed.mapKey((r.route_short_name || '').trim(), r);
       if (!key) continue;
       routeToLine.set(r.route_id, key);
       if (r.route_type === '11') {
@@ -524,6 +575,20 @@ async function processMode(cfg) {
   // railKeep: this cfg sees only its own kind of rails (see MODES above);
   // railExtra admits single oddballs from other layers (the rack railway)
   if (cfg.railKeep) osm.elements = osm.elements.filter((e) => cfg.railKeep.has(e.tags?.railway) || (cfg.railExtra && cfg.railExtra(e)));
+  // graph.mjs knows subway/tram/light_rail/rail and nothing else, so a way
+  // admitted as a building site is renamed to what it is being built as —
+  // otherwise railExtra lets it in and the graph drops it again (Vienna, 8.09).
+  if (cfg.railExtra) {
+    let retag = 0;
+    for (const e of osm.elements) {
+      const rw = e.tags?.railway;
+      if (['construction', 'disused', 'proposed'].includes(rw)) {
+        e.tags = { ...e.tags, railway: e.tags.construction || e.tags.disused || e.tags.proposed || 'rail' };
+        retag++;
+      }
+    }
+    if (retag) log(`retagged ${retag} building-site ways to their target railway=*`);
+  }
   // Guard inherited from Bucharest, where OSM mapped the metro as
   // per-direction tunnels that meet nowhere: every dangling subway endpoint
   // gets welded to the nearest other-way vertex within 60 m so Viterbi can

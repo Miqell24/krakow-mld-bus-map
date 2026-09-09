@@ -182,7 +182,7 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-right');
   map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showUserHeading: true, fitBoundsOptions: { maxZoom: 15.5 } }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 120 }), 'bottom-left');
-  map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Timetables: GTFS ZTP Kraków · MLD (Koleje Małopolskie) · WST Wieliczka' }));
+  map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Timetables: GTFS ZTP Kraków · Koleje Małopolskie — MLD + SKA · WST Wieliczka' }));
 
   const [meta, linesMeta] = await Promise.all([
     fetch('data/meta.json').then((r) => r.json()),
@@ -230,7 +230,7 @@ async function init() {
   // 'lines' redraws the same data line by line, up to four coloured strands
   // side by side, everything busier as one grey trunk. Both views are built from
   // the same files; the switch is layers and paint, never a reload.
-  const state = { bus: true, tram: true, selected: null, journey: null, view: 'corridors', bg: 'auto' };
+  const state = { bus: true, tram: true, ska: true, selected: null, journey: null, view: 'corridors', bg: 'auto' };
   paintChips(false);
 
   // Line layers go below the base style labels (street names stay readable).
@@ -877,8 +877,17 @@ async function init() {
   const busOnlyNumbersN = ['case', ['has', 'bl0'], sectionRow('b'), busOnlyNumbers];
   const tramOnlyNumbersN = ['case', ['has', 'tl0'], sectionRow('t'), tramOnlyNumbers];
   function applyFilters() {
-    const modes = [state.bus ? 'bus' : null, state.tram ? 'tram' : null].filter(Boolean);
-    const modeC = ['in', ['get', 'mode'], ['literal', modes]];
+    // The SKA rides the tram MODE (it is drawn on the rail graph, in the
+    // engine's rail-trunk treatment) but it is its own network on the panel:
+    // the trains carry metro=1, so one toggle holds the trams and another the
+    // three SKA lines — the split Berlin's legend needed.
+    const modes = [state.bus ? 'bus' : null, (state.tram || state.ska) ? 'tram' : null].filter(Boolean);
+    const tramC = state.tram && state.ska ? true
+      : state.tram ? ['!=', ['get', 'metro'], 1]
+        : state.ska ? ['==', ['get', 'metro'], 1] : false;
+    const modeC = ['any',
+      state.bus ? ['==', ['get', 'mode'], 'bus'] : false,
+      (state.tram || state.ska) ? ['all', ['==', ['get', 'mode'], 'tram'], tramC] : false];
     // an active journey hides the WHOLE regular network (user request: the
     // line's return run and the rest of its route were noise) — the ride is
     // drawn complete by the journey overlay: legs, via stops, numbers
@@ -904,21 +913,21 @@ async function init() {
     // selected only complexes where that line terminates keep their name
     const nameModeC = ['any',
       state.bus ? ['in', 'bus', ['get', 'modes']] : false,
-      state.tram ? ['in', 'tram', ['get', 'modes']] : false];
+      (state.tram || state.ska) ? ['in', 'tram', ['get', 'modes']] : false];
     BADGE_NAME_LAYERS.forEach((id, b) => {
       map.setFilter(id, ['all', bandC(b), ['has', 'name'], nameModeC,
         state.journey ? false
           : state.selected ? ['in', state.selected, ['get', 'arr']] : true]);
     });
     let numC, numField;
-    if (state.bus && !state.tram) {
+    if (state.bus && !(state.tram || state.ska)) {
       // trams hidden: shared corridor labels (mode=tram with busLines) must stay,
       // but they show only the bus part
       numC = ['all', ['any', ['==', ['get', 'mode'], 'bus'], ['has', 'busLines']], selC];
       numField = busOnlyNumbersN;
     } else {
       numC = ['all', modeC, selC];
-      numField = state.tram && !state.bus ? tramOnlyNumbersN : numberField;
+      numField = (state.tram || state.ska) && !state.bus ? tramOnlyNumbersN : numberField;
     }
     for (const d of NUM_LAYERS) {
       const thinC = d.id === 'street-numbers-extra' ? densityCond : densityMainCond;
@@ -1024,7 +1033,7 @@ async function init() {
     document.querySelectorAll('#chips .chip').forEach((c) => c.classList.toggle('active', c.dataset.line === state.selected));
     applyFilters();
   });
-  for (const [id, key] of [['toggle-bus', 'bus'], ['toggle-tram', 'tram']]) {
+  for (const [id, key] of [['toggle-bus', 'bus'], ['toggle-tram', 'tram'], ['toggle-ska', 'ska']]) {
     document.getElementById(id).addEventListener('change', (e) => { state[key] = e.target.checked; applyFilters(); });
   }
   applyFilters();
@@ -1224,7 +1233,7 @@ async function init() {
         const fs = Math.max(16, Math.round(out.width / 130));
         ctx.font = `${fs}px sans-serif`;
         ctx.textBaseline = 'bottom';
-        const txt = '© OpenStreetMap contributors · OpenFreeMap · GTFS: ZTP Kraków · MLD (Koleje Małopolskie) · WST Wieliczka';
+        const txt = '© OpenStreetMap contributors · OpenFreeMap · GTFS: ZTP Kraków · Koleje Małopolskie (MLD + SKA) · WST Wieliczka';
         const tw = ctx.measureText(txt).width;
         ctx.fillStyle = 'rgba(255,255,255,0.82)';
         ctx.fillRect(out.width - tw - fs, out.height - fs * 1.7, tw + fs, fs * 1.7);
@@ -1468,7 +1477,7 @@ async function init() {
             const fs = Math.max(16, Math.round(Wf / 500));
             cx.font = `${fs}px sans-serif`;
             cx.textBaseline = 'bottom';
-            const txt = '© OpenStreetMap contributors · OpenFreeMap · GTFS: ZTP Kraków · MLD (Koleje Małopolskie) · WST Wieliczka';
+            const txt = '© OpenStreetMap contributors · OpenFreeMap · GTFS: ZTP Kraków · Koleje Małopolskie (MLD + SKA) · WST Wieliczka';
             const tw = Math.min(cx.measureText(txt).width, wpx - fs);
             cx.fillStyle = 'rgba(255,255,255,0.82)';
             cx.fillRect(wpx - tw - fs, hpx - fs * 1.7, tw + fs, fs * 1.7);
