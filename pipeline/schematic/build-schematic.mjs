@@ -318,3 +318,6 @@ write('meta.json', {
   weights: cfg.weights,
 });
 log(`done — ${busLineCount} bus + ${tramLineCount} tram lines, stage "${cfg.graph ? 'graph' : 'layout'}"`);
+// the diagram reads the GTFS itself: its stop names and numbers get the same
+// post-pass as the geographic sheet (names.mjs is idempotent)
+(await import('../names.mjs')).namesPass(join(ROOT, 'data/out'), undefined, { log });
