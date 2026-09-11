@@ -112,7 +112,7 @@
       const bytes = await exportPdf(m, bbox, setLbl);
       window.__lastPdf = bytes; // test hook
       const d = new Date(), pad = (n) => String(n).padStart(2, '0');
-      const city = (document.title.split(/\s+[—–|-]\s+/)[0] || 'map').replace(/[^\w]+/g, '-').toLowerCase();
+      const city = (document.title.split(/\s+[—–|-]\s+/)[0] || 'map').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'map';
       const blob = new Blob([bytes], { type: 'application/pdf' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
